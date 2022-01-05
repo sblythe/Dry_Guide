@@ -4,6 +4,8 @@ repo_url: https://github.com/sblythe/Dry_Guide
 
 markdown_extensions:
   - admonition
+  - pymdownx.details
+  - pymdownx.superfences
   - toc:
     permalink: true
     separator: _
