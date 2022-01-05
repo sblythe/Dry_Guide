@@ -82,7 +82,7 @@ homedu
 More information is provided below to help install and use software.
 
 !!! Note
-In general, we will not be saving files long-term anywhere on Quest! Most of your work will take place within the project directory __p31603__. All files should be stored on the lab's network accessible storage device/server. 
+    In general, we will not be saving files long-term anywhere on Quest! Most of your work will take place within the project directory __p31603__. All files should be stored on the lab's network accessible storage device/server. 
 
 ## Projects and Queues
 
