@@ -3,14 +3,14 @@ theme: readthedocs
 repo_url: https://github.com/sblythe/Dry_Guide
 
 markdown_extensions:
-  - admonition
-  - pymdownx.details
-  - pymdownx.superfences
-  - toc:
-    permalink: true
-    separator: _
-  - fenced_code
-  - sane_lists
+    - admonition
+    - pymdownx.details
+    - pymdownx.superfences
+    - toc:
+        permalink: true
+        separator: _
+    - fenced_code
+    - sane_lists
 
 nav:
   - Home: index.md
