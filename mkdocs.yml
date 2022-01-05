@@ -1,1 +1,15 @@
-site_name: My Docs
+site_name: Blythe Lab Dry Guide
+theme: readthedocs
+repo_url: https://github.com/sblythe/Dry_Guide
+
+markdown_extensions:
+  - admonition
+  - toc:
+    permalink: true
+    separator: _
+  - fenced_code
+  - sane_lists
+
+nav:
+  - Home: index.md
+  - Dry Guide: dryguide.md

@@ -1,8 +1,8 @@
-# Introduction
+# Blythe Dry Lab Guide
 
 [TOC]
 
-Many thanks to the Andersen Lab for writing the bulk of this "Dry Guide", which has been adapted here to the Blythe Lab's needs. 
+Many thanks to the Andersen Lab, whose own "Dry Guide" is the basis for this adaptation. 
 
 The computing cluster available to researchers at Northwestern is called Quest. Please see the link below to go to the table of contents for Northwestern IT's support docs for Quest.
 
@@ -135,3 +135,91 @@ Here are some commmon commands used to interact with SLURM and check on job stat
 * `seff <jobID>` to check how much '**eff**ort' a job took
 
 * `sacct -X` to display all accounting data for all jobs for a user. `-X` options only shows stats relevant to the job allocation itself, leaving out different steps in the process. This is a fine way to check on the status of submitted jobs and to get the job id. 
+
+# Checking your setup with a Test Script
+
+To test that everything is setup properly, I have made a "test script" that can be edited appropriately according to the comments and then submitted to the batch scheduler to test that everything is running well in your local environment.
+
+The basic test script is located at
+
+```
+/projects/p31603/Quest_Setup_Test_Script_PE.sh
+```
+
+To test your setup:
+
+1) If you haven't done so, create a directory with your name at `projects/p31603/`
+
+2) Make within your personal folder a directory for the test run (e.g., `TestSetup`)
+
+3) Within your test-run directory, make a directory for the output of the test (e.g., `TestOutput`)
+
+4) Now, copy the test script from the location above to your `TestSetup` directory. Use the `cp` command. 
+
+5) Edit the **copy** of the script as indicated in the comments so that the filepaths are accurately rendered. It will not run without some edits from you.
+
+6) The script on its own is also not yet executable. To make it executable, run the command (while in the directory that contains your copy of the test script):
+
+```
+chmod u+x Quest_Setup_Test_Script_PE.sh
+```
+
+This makes you (the **u**ser) able to e**x**ecute the file.
+
+7) To run the script using the batch scheduler, run (from within the directory containing the newly executable copy of the script):
+
+```
+sbatch Quest_Setup_Test_Script_PE.sh
+```
+
+8) On an early test, it took about seven minutes for the test to run. You can check the status of the run using `sacct -X`. When it is done, the output of `sacct` will say "COMPLETED". To check how many resources the test used, you can run `seff <jobID>`, where the Job ID is the first column of the output from `sacct`. This is useful to know so that you can scale your demands for resources accordingly, particularly the memory, time, and number of cores. 
+
+# Setup of Blythe Lab Resources on Quest p31603
+
+To run our standard analyses, we need to build resources. We like to use TrimGalore/cutadapt to trim adapters. We need bowtie (and HiSat) indices to map our reads to. This document just indicates what steps were taken to customize the lab's __p31603__ environment to do our analyses. Note, it should not be necessary for any lab user to need to repeat any of these operations. This is provided mainly as a record of what was done. Any future customization will be logged in this document.
+
+### installing TrimGalore, Cutadapt, 
+
+I checked that `virtualenv` was installed by running `which virtualenv`. I have it, but it may be from a prior custom installation, and may not be included in new Quest accounts. To install virtualenv, try `pip install virtualenv`. 
+
+To install `TrimGalore`, I first built within `p31603` a python3 virtual environment using `virtualenv -p python3 TrimGaloreEnv`
+
+Next, I changed to the new directory `TrimGaloreEnv` and activated the environment `source bin/activate`.
+
+I then installed `TrimGalore` using `git`: `git clone https://github.com/FelixKrueger/TrimGalore.git`
+
+I switch to the `TrimGalore` directory and copied the executable `trim_galore` to the `bin` directory of the virtual environment by entering `cp trim_galore ../bin`.
+
+We next need to install `cutadapt` and its dependencies. First, we need `cython`. To install it, we run `pip install cython`. Next, we need `setuptools_scm`. This is also installed via `pip`.
+
+We then install `cutadapt` using `python3 -m pip install --upgrade cutadapt`. 
+
+`TrimGalore` likes to use `FastQC` as well, but this is available as a Quest Module. (`module add fastqc/0.11.5`)
+
+### downloading the Drosophila genome
+
+I have made a folder called "Genomes" in the `p31603` directory. From within `Genomes`, I downloaded the fly genome using
+
+```
+wget --timestamping 'ftp://hgdownload.cse.ucsc.edu/goldenPath/dm6/bigZips/dm6.fa.gz'
+```
+
+### Building a bowtie2 index
+
+Bowtie2 indices will be put in subdirectories within `p31603/Bowtie_Indices/`.
+
+To build the indices, it is a good idea to start an interactive session on __b1042__. 
+
+```
+srun -A b1042 --partition=genomicsguestA -N 1 -n 24 --mem=64G --time=12:00:00 --pty bash -i
+```
+
+Then,
+
+```
+module add bowtie2
+cd Bowtie_Indices
+mkdir dm6
+cd dm6
+bowtie2-build --threads 16 ../../Genomes/dm6.fa.gz dm6
+```

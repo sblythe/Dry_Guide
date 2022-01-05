@@ -1,20 +1,6 @@
-# Welcome to MkDocs
+# Welcome to the Blythe Dry Lab Guide
 
-For full documentation visit [mkdocs.org](https://www.mkdocs.org).
+The dry lab guide details the computational resources and tasks used in the Blythe Lab. 
 
-## Commands
-
-* `mkdocs new [dir-name]` - Create a new project.
-* `mkdocs serve` - Start the live-reloading docs server.
-* `mkdocs build` - Build the documentation site.
-* `mkdocs -h` - Print help message and exit.
-
-## Project layout
-
-    mkdocs.yml    # The configuration file.
-    docs/
-        index.md  # The documentation homepage.
-        Introduction.md
-        Using the Test Script.md
-        Setup of Custom Resources.md
-        ...       # Other markdown pages, images and other files.
+Please also see:
+[Blythe Lab Website](https://www.blythelab.org/)
