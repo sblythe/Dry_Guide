@@ -8,6 +8,14 @@ The computing cluster available to researchers at Northwestern is called Quest. 
 
 __[Quest Docs](http://www.it.northwestern.edu/research/user-services/quest/index.html)__
 
+## Introduction/Overview
+
+New users will likely have some confusion about how all of this works. This guide is meant to help you with that. As a high-level overview: we can use a remote computing cluster called Quest to run processor-intensive jobs without tying down our local computation resources. Quest is a collection of "Nodes" of many multithreaded processors, as well as disk storage space. You can think of Quest as a remote computer that you can interact with solely through the command line. The computational resources on Quest are parceled out into 'allocations'. The most important allocation for our purposes is __b1042__. This is the "Genomics" buy-in allocation. Anyone at NU can sign up for access to __b1042__, and once they have access, they can begin submitting jobs to this system. When you log in to Quest, however, you aren't 'within' __b1042__, instead, when you log in, you are dropped off in your home directory (in terms of the file-system), and are using (in terms of computational resources) what is referred to as a __login node__. While __b1042__ has many cores and much memory available for computational processes, __login nodes__ have relatively less computational power. Therefore, if we have processor-instensive jobs to perform, we don't want to use a __login node__, instead we want to use __b1042__. To do this, we have to ask Quest to do our jobs on __b1042__ through one of two methods: as an 'interactive session' or as a 'batch submission'. Below, I describe how to initiate both of these approaches. 
+
+Storage is another matter: each user's home directory has a limited amount of *private* storage that will be indefinitely maintained (and backed up). This is on the order of 80 Gigabytes, which isn't much. There are two other storage options: within the *Scratch Space* within __b1042__ as well as within the lab's own dedicated project, __p31603__. *Scratch Space* is essentially a wild-west first-come-first-served disk space for *all* users of __b1042__ to *temoprarily* store files that they are using in a project. It is vast (~200 Terabytes), not backed up, and files over 30-days in age are deleted regularly. The Blythe Lab has a directory within __b1042__ created within this *Scratch Space* that lab members can use to temporarily store files if necessary. In addition, the Blythe Lab has a dedicated "project" within Quest (__p31603__)that affords us 500 Gigabytes of storage space. This is the location where we should focus on staging our computational tasks. 
+
+In the following, I describe how to get access to Quest, how to use some of its unique features, and how to submit jobs. 
+
 ## New Users
 
 To gain access to Quest: 
@@ -84,18 +92,18 @@ More information is provided below to help install and use software.
 !!! Note
     In general, we will not be saving files long-term anywhere on Quest! Most of your work will take place within the project directory __p31603__. All files should be stored on the lab's network accessible storage device/server. 
 
-## Projects and Queues
+## Projects
 
 Quest is broadly organized into projects (or partitions, or allocations). Projects have associated with them storage, nodes, and users.
 
 To determine what "groups" you have access to, enter `groups` on the command line. You should see at the very least `b1042` and `p31603` in the returned text. 
 
-The Blythe lab has access to one project, __p31603__. This is where we have 500 GB of total storage. This is where we will store any compiled software necessary for running our analyses. 
+The Blythe lab has access to one project, __p31603__. This is where we have 500 GB of total storage. This is where we will store any compiled software necessary for running our analyses, as well as stage computational tasks. 
 
 __b1042__ - The 'Genomics' Project has 200 Tb of space and 100 nodes associated with it. This space is shared with other labs and is designed for temporary use only. The space is available at `/projects/b1042/BlytheLab/`. By default, files are deleted after 30 days. One can submit jobs to `--partition=genomicsguestA` to use this partition, with a max job duration of 48hr. 
 
 !!! Note
-    Anyone who uses quest should build your own project folder under `/projects/b1042/projects/BlytheLab/` with your name. You should only write and revise files under your project folder. You can read/copy data from __b1042__ but don't write any data outside of your project folder. Storage on __b1042__ is for 30 days only, so do not store anything here that you hope to maintain access to over a long period. 
+    Anyone who uses Quest should build your own folder under `/projects/p31603` with your name. You should only write and revise files under your project folder. You can read/copy data from elsewhere in __p31603__ but don't write/save any data to locations outside of your project folder. You could also store things on `/projects/b1042/BlytheLab`, but storage anywhere on __b1042__ is for 30 days only, so do not store anything here that you hope to maintain access to over a long period. We have limited space on __p31603__. This is also not a long-term location for storage, but rather a site where you import raw data, and save the output of processing, before you download the data back to long-term storage. 
 
 ## Running interactive jobs on Quest
 
@@ -118,9 +126,7 @@ Quest has a collection of packages installed. You can run `module avail` to see 
 
 If you are all set up to use the lab's resources on Quest, you should be able to run the following test script to confirm that everything is operating as expected. The lab's project allocation contains a directory (.../TestData) that we use to check that everything is configured properly. 
 
-Jobs on Quest are managed by [SLURM](https://slurm.schedmd.com/). Below is a template to submit a job to SLURM. One can run it with `sbatch script.sh`.
-
-Scripts for SLURM submissions differ slightly from regular bash scripts in that they have an extensive header that passes commands to SLURM that helps it determine how many resources to allocate to the job. Please see the `/projects/p31603/Quest_Setup_Test_Script_PE.sh` for an example of a script that is set up to run via the batch scheduler. 
+Jobs on Quest are managed by [SLURM](https://slurm.schedmd.com/). Scripts for SLURM submissions differ slightly from regular bash scripts in that they have an extensive header that passes commands to SLURM that helps it determine how many resources to allocate to the job. Please see the `/projects/p31603/Quest_Setup_Test_Script_PE.sh` for an example of a script that is set up to run via the batch scheduler. A set of brief instructions on how to run the test script is included on a later page in this guide. 
 
 ## Monitoring SLURM Jobs on Quest
 
