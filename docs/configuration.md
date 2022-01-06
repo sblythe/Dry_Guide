@@ -2,7 +2,8 @@
 
 To run our standard analyses, we need to build resources. We like to use TrimGalore/cutadapt to trim adapters. We need bowtie (and HiSat) indices to map our reads to. This document just indicates what steps were taken to customize the lab's __p31603__ environment to do our analyses. 
 
-!!! Note:
+!!! note
+
      It should not be necessary for any lab user to need to repeat any of these operations. This information is provided mainly as a record of what was done. Any future customization will be logged in this document.
 
 ## installing TrimGalore and Cutadapt 
@@ -57,7 +58,7 @@ python3 -m pip install --upgrade cutadapt
 Finally, to allow for parallel processing of TrimGalore jobs, we need to install `pigz` (parallel gzip). 
 
 ```
-`git clone https://github.com/madler/pigz.git`
+git clone https://github.com/madler/pigz.git
 ```
 
 We also have to switch to the pigz directory, 'make' it, and copy the
@@ -69,7 +70,8 @@ make
 cp pigz ../bin
 ```
 
-!!! Note:
+!!! note
+
     `TrimGalore` likes to use `FastQC` as well, but this is available as a Quest Module. (`module add fastqc/0.11.5`), so we do not need to install it.
 
 ## downloading the Drosophila genome
