@@ -1,24 +1,76 @@
 # Setup of Blythe Lab Resources on Quest p31603
 
-To run our standard analyses, we need to build resources. We like to use TrimGalore/cutadapt to trim adapters. We need bowtie (and HiSat) indices to map our reads to. This document just indicates what steps were taken to customize the lab's __p31603__ environment to do our analyses. Note, it should not be necessary for any lab user to need to repeat any of these operations. This information is provided mainly as a record of what was done. Any future customization will be logged in this document.
+To run our standard analyses, we need to build resources. We like to use TrimGalore/cutadapt to trim adapters. We need bowtie (and HiSat) indices to map our reads to. This document just indicates what steps were taken to customize the lab's __p31603__ environment to do our analyses. 
+
+!!! Note:
+     It should not be necessary for any lab user to need to repeat any of these operations. This information is provided mainly as a record of what was done. Any future customization will be logged in this document.
 
 ## installing TrimGalore and Cutadapt 
 
-I checked that `virtualenv` was installed by running `which virtualenv`. I have it, but it may be from a prior custom installation, and may not be included in new Quest accounts. To install virtualenv, try `pip install virtualenv`. 
+TrimGalore and cutadapt run within a virtual environment that we need to set up. 
 
-To install `TrimGalore`, I first built within `p31603` a python3 virtual environment using `virtualenv -p python3 TrimGaloreEnv`
+I checked that `virtualenv` was installed by running `which virtualenv`. I have it in my Quest environment, but it may be from a prior custom installation, and may not be included in new Quest accounts. 
 
-Next, I changed to the new directory `TrimGaloreEnv` and activated the environment `source bin/activate`.
+If necessary to install virtualenv:
 
-I then installed `TrimGalore` using `git`: `git clone https://github.com/FelixKrueger/TrimGalore.git`
+```
+pip install virtualenv 
+```
 
-I switch to the `TrimGalore` directory and copied the executable `trim_galore` to the `bin` directory of the virtual environment by entering `cp trim_galore ../bin`.
+To install `TrimGalore`, I first built within `p31603` a python3 virtual environment using 
 
-We next need to install `cutadapt` and its dependencies. First, we need `cython`. To install it, we run `pip install cython`. Next, we need `setuptools_scm`. This is also installed via `pip`.
+```
+virtualenv -p python3 TrimGaloreEnv
+```
+Next, I changed to the new directory `TrimGaloreEnv` and activated the environment:
 
-We then install `cutadapt` using `python3 -m pip install --upgrade cutadapt`. 
+```
+source bin/activate
+```
 
-`TrimGalore` likes to use `FastQC` as well, but this is available as a Quest Module. (`module add fastqc/0.11.5`)
+I then installed `TrimGalore` using `git`: 
+
+```
+git clone https://github.com/FelixKrueger/TrimGalore.git
+```
+
+I then switched to the `TrimGalore` directory and copied the executable `trim_galore` to the `bin` directory of the virtual environment by entering 
+
+```
+cp trim_galore ../bin
+```
+
+We next need to install `cutadapt` and its dependencies. First, we need `cython`. To install it, we run
+
+```
+pip install cython
+```
+
+Next, we need `setuptools_scm`. This is also installed via `pip` in a manner similar to the line above.
+
+We then install `cutadapt`:
+
+```
+python3 -m pip install --upgrade cutadapt
+```
+
+Finally, to allow for parallel processing of TrimGalore jobs, we need to install `pigz` (parallel gzip). 
+
+```
+`git clone https://github.com/madler/pigz.git`
+```
+
+We also have to switch to the pigz directory, 'make' it, and copy the
+executable into the parental `bin` directory.
+
+```
+cd pigz
+make
+cp pigz ../bin
+```
+
+!!! Note:
+    `TrimGalore` likes to use `FastQC` as well, but this is available as a Quest Module. (`module add fastqc/0.11.5`), so we do not need to install it.
 
 ## downloading the Drosophila genome
 
