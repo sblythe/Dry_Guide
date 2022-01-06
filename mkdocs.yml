@@ -13,6 +13,7 @@ markdown_extensions:
 nav:
   - Home: index.md
   - Dry Guide: dryguide.md
+  - Best Practices: bestpractices.md
   - Using the Test Script: testscript.md
   - Custom Configuration Log: configuration.md
   
