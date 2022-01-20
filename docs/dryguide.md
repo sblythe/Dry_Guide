@@ -126,7 +126,26 @@ Quest has a collection of packages installed. You can run `module avail` to see 
 
 If you are all set up to use the lab's resources on Quest, you should be able to run the following test script to confirm that everything is operating as expected. The lab's project allocation contains a directory (.../TestData) that we use to check that everything is configured properly. 
 
-Jobs on Quest are managed by [SLURM](https://slurm.schedmd.com/). Scripts for SLURM submissions differ slightly from regular bash scripts in that they have an extensive header that passes commands to SLURM that helps it determine how many resources to allocate to the job. Please see the `/projects/p31603/Quest_Setup_Test_Script_PE.sh` for an example of a script that is set up to run via the batch scheduler. A set of brief instructions on how to run the test script is included on a later page in this guide. 
+Jobs on Quest are managed by [SLURM](https://slurm.schedmd.com/). Scripts for SLURM submissions differ slightly from regular bash scripts in that they have an extensive header that passes commands to SLURM that helps it determine how many resources to allocate to the job. Please see the `/projects/p31603/Quest_Setup_Test_Script_PE.sh` for an example of a script that is set up to run via the batch scheduler. A set of brief instructions on how to run the test script is included on a later page in this guide.
+
+## Deciding How Much Resources to Ask For
+
+This is tricky to guess. In general, you want to ask for about 2x more resources than your job actually takes. On the job scheduler, you need to request an amount of cluster up-time, a number of cores/cpus, and an amount of memory per cpu.
+
+__The trade-off__ is that the more resources you ask for, the longer it takes for the scheduler to start your job. On the other hand, if you don't ask for sufficient resources, the process will terminate if you run out of time, or perhaps throw an error if memory resources are exceeded. 
+
+!!! Note
+    All of our jobs are only performed on a single _node_. The line on the job scheduler for nodes should read: `#SBATCH --nodes=1`
+
+Once you have an idea of how your jobs run, you can adjust the following as necessary. In a recent run, tasks like trimming a set of paired-end reads (~20M reads/mate pair/sample) took around 10 minutes per sample. Mapping with bowtie2 (plus samtools and picard) took an additional 30 minutes. Therefore, if you have 12 samples of this type, a trimming and mapping script would take at least 8 hours of clock time. Pad this. Ask for 10 hours of compute time, the appropriate number of cores (8?), and sufficient memory (8 GB).
+
+```
+#SBATCH --ntasks-per-node=8
+#SBATCH --time=10:00:00
+#SBATCH --mem-per-cpu=8G
+```
+
+As mentioned above, this could take some time to schedule, but it should be sufficient to complete the job. 
 
 ## Monitoring SLURM Jobs on Quest
 
