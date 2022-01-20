@@ -142,5 +142,43 @@ Here are some commmon commands used to interact with SLURM and check on job stat
 
 * `sacct -X` to display all accounting data for all jobs for a user. `-X` options only shows stats relevant to the job allocation itself, leaving out different steps in the process. This is a fine way to check on the status of submitted jobs and to get the job id. 
 
+## Merging FASTQ files from multiple lanes
 
+If we do sequencing ourselves on a NextSeq or any Illumina machine that organizes flowcells into "Lanes", the data we receive is returned 'by lane', even though each sample is present in all lanes. In this case, it is a good idea to merge reads by lane.
+
+The following bash script will do it, but it has been generalized so that you need to enter the proper information w/r/t directories. 
+
+This script will change to the _parental_ directory containing the downloaded data, create a new directory "Raw_Data" where it will save the merged fastq.gz files, then change to the subdirectory that contains the downloaded (split by lane) data, and loop through the fastq files, merging them. 
+
+!!! Note
+     For this to work, you have to move each pair of reads (for paired-end data) out of the individual directory that Illumina provides it in, to a single common directory. It would be possible to write some code that would do this for you, but so far I've just done it manually. 
+
+```
+#!/bin/bash
+
+cd <path/to/directory/above/your/downloaded/fastQ/data>
+mkdir Raw_Data
+
+parentdir=<path/to/directory/above/your/downloaded/fastQ/data>
+rawdir=<directory name with the downloaded fastQ data>
+
+cd $parentdir/$rawdir
+
+echo
+echo
+
+ls -1 *R1*.gz | awk -F '_' '{print $1"_"$2}' | sort | uniq > ID
+
+for i in `cat ./ID`
+do
+    echo "Merging"
+    echo $i
+    echo
+
+    cat $i\_L001\_R1_001.fastq.gz $i\_L002\_R1_001.fastq.gz $i\_L003\_R1_001.fastq.gz $i\_L004\_R1_001.fastq.gz > $parentdir/Raw_Data/$i\_R1_cat.fastq.gz
+
+    cat $i\_L001\_R2_001.fastq.gz $i\_L002\_R2_001.fastq.gz $i\_L003\_R2_001.fastq.gz $i\_L004\_R2_001.fastq.gz > $parentdir/Raw_Data/$i\_R2_cat.fastq.gz
+
+done
+```
 
