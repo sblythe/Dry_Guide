@@ -101,3 +101,27 @@ mkdir dm6
 cd dm6
 bowtie2-build --threads 16 ../../Genomes/dm6.fa.gz dm6
 ```
+## Downloading the Khost/Larracuente Repbase and Bowtie indexing.
+
+This database is published in [Khost... Larracuente Genome Research 2017.](https://genome.cshlp.org/content/early/2017/04/03/gr.213512.116) 
+
+The data is in supplemental file 9. 
+
+(https://genome.cshlp.org/content/suppl/2017/04/03/gr.213512.116.DC1/Supplemental_file_S9.txt)
+
+This was downloaded and placed on Quest. As above, the indices were built...
+```
+srun -A b1042 --partition=genomicsguestA -N 1 -n 24 --mem=64G --time=12:00:00 --pty bash -i
+```
+
+Then,
+
+```
+module add bowtie2
+cd Bowtie_Indices
+mkdir Dmel_Repbase
+cd Dmel_Repbase
+bowtie2-build --threads 16 ../../Genomes/Khost_Larracuente_2017_Repbase.txt dmRep
+```
+
+This goes super quick. All done.
