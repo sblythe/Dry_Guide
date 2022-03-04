@@ -170,23 +170,97 @@ The following bash script will do it, but it has been generalized so that you ne
 This script will change to the _parental_ directory containing the downloaded data, create a new directory "Raw_Data" where it will save the merged fastq.gz files, then change to the subdirectory that contains the downloaded (split by lane) data, and loop through the fastq files, merging them. 
 
 !!! Note
-     For this to work, you have to move each pair of reads (for paired-end data) out of the individual directory that Illumina provides it in, to a single common directory. It would be possible to write some code that would do this for you, but so far I've just done it manually. 
+     For this to work, you have to move each pair of reads (for paired-end data) out of the individual directory that Illumina provides it in, to a single common directory. To be super careful, you could do it yourself, by hand. But this would obviously become tedious with more than a handful of different barcoded samples. You can do this from the command line, by navigating to the directory that contains each of the individual directories, and then using the command `mv` to move the contents of each subdirectory _up_ one level. The command for this looks like `mv */* .`. Naturally, this is not a command that you want to mess up, or run in the wrong place because there is no 'undo' here. 
 
 ```
 #!/bin/bash
 
-cd <path/to/directory/above/your/downloaded/fastQ/data>
+# One possible source of error in running this code is that the directory 
+# structures are not properly entered. This code assumes that you have 
+# downloaded barcode-split NextSeq (or other multi-lane) data from BaseSpace.
+# The download generates two directories, one with the barcode split data, 
+# and then an "Unindexed Reads" directory. We do not concern ourselves with 
+# the unindexed reads directory. The barcode split data will be named with 
+# the experiment name from the sample sheet, plus a serial number of some sort. 
+# Within *that* directory, there are individual folders for each sample. The 
+# problem we hope to solve here is that each sample's read (forward and reverse)
+# is split into four individual files representing reads that originated from
+# clusters in one of the four lanes of the flowcell.
+
+# One of these files will have the filename structure: 
+
+# <sample_name_from_sheet>_S[number]_L00[1-4]_R[1-2]_001.fastq.gz
+
+# The sample name from sheet is self-explanatory. 
+# The S[number] is the sample number order from the sample sheet.
+# The L00[1-4] tells you what lane the data came from.
+# The R[1-2] identifies whether it is mate1 or mate2 data.
+# I have no idea what the 001 is, but perhaps this records re-dos of the base calls.
+
+# The fields are delimited with underscores.
+
+# One potential area of error can arise if the user uses underscores in the 
+# Sample names that are provided in the sample sheet. 
+
+####
+
+# This code assumes that you have first placed the downloaded directory into
+# a parental directory for the experiment. It will 1) create a new directory
+# within the parental directory for the output of the code. This directory will
+# be named "Raw_Data". 2) It will go to the downloaded directory and yank the 
+# per-lane fastQ files from each of the per-sample subdirectories and move them
+# one level up to the parental directory. 3) It will identify all unique sample
+# names and 4) go through each of them and concatenate them by lane. 5) Files will 
+# be written to "Raw_Data" directory with the structure of:
+
+# <Sample_name_from_sheet>_S[number]_R[1-2]_cat.fastq.gz
+
+# where the L00[1-4] has been dropped and replaced with 'cat' to indicate the
+# files have been concatenated.
+
+# in the code below, please replace any text between <> with the data the text
+# describes.
+
+# AS WRITTEN, THE CODE WILL FAIL IF YOU HAVE UNDERSCORES IN YOUR SAMPLE NAMES
+# If this is an issue, one option is to alter the filenames of each file to drop
+# the underscores, which isn't too hard if you know how to do it either on the
+# command line, or even in R. Another alternative is to parse the command below 
+# where the unique names are pulled out to accurately capture the first two fields
+# of the filename as described above (<sample_name_from_sheet>_S[number]). This
+# needs to be consistent, however, between all the samples...
+
+# If in doubt, comment out the two commands beginning with `cat` in the for-loop
+# below and run the code, checking the verbose output that tells you what sample
+# name the code intends on working on. 
+
+### BEGIN
+
+# define the parental directory 
+parentdir=<path/to/directory/above/your/downloaded/fastQ/data>
+
+# define the directory containing the downloaded data
+downloaddir=<directory name with the downloaded fastQ data>
+
+# change to parental directory
+cd $parentdir
+# make a new destination for the output
 mkdir Raw_Data
 
-parentdir=<path/to/directory/above/your/downloaded/fastQ/data>
-rawdir=<directory name with the downloaded fastQ data>
+# change to the downloaded data directory
+cd $parentdir/$downloaddir
 
-cd $parentdir/$rawdir
+# yank the data from subdirectories up one level
+# NOTE: if you are re-running this code DO NOT re-run this line
+# (i.e., please comment it out prior to re-run)
+mv */* .
 
-echo
-echo
+# get the unique sample names (<sample_name_from_sheet>) and sample 
+# numbers (S[number]). Write these to a file in the downloaded directory.
 
 ls -1 *R1*.gz | awk -F '_' '{print $1"_"$2}' | sort | uniq > ID
+
+# loop through sample names in the file, concatenating by lane. Write output
+# to the "Raw_Data" directory you created in the parental directory. 
 
 for i in `cat ./ID`
 do
