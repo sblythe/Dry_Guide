@@ -281,11 +281,11 @@ done
 
 In the code above, if the sample names in the sample sheet contained underscores, there will be an error because the call to `awk` will inappropriately only return the first two underscore-delimited fields, which in that case will be subsets of the sample name, as opposed to the `sample name` plus the `S[number]` field. One way to fix this is in R, where some of the string-manipulating functions are easier to implement, and renaming of files is straightforward.
 
-!!! Note:
-    This solution similarly makes certain additional assumptions, namely that although the sample names include underscores, that hopefully at least none of the sample names themselves contain the text `_S` followed by a number. If this is the case, then this solution won't work. Fortunately, this type of double error is not one that you would make more than once, hopefully.
+!!! Note
+        This solution similarly makes certain additional assumptions, namely that although the sample names include underscores, that hopefully at least none of the sample names themselves contain the text `_S` followed by a number. If this is the case, then this solution won't work. Fortunately, this type of double error is not one that you would make more than once, hopefully.
 
-!!! Note:
-    If you have to run this, the easiest way to do it is to run it on all the files once they have been moved up from the individual subdirectories. This means that you should 1) move the files out of the subdirectories manually (see the script above), 2) run the code below. You could be creative and edit the code to operate on the individual subdirectories, and not have to do this all in parts.
+!!! Note
+        If you have to run this, the easiest way to do it is to run it on all the files once they have been moved up from the individual subdirectories. This means that you should 1) move the files out of the subdirectories manually (see the script above), 2) run the code below. You could be creative and edit the code to operate on the individual subdirectories, and not have to do this all in parts.
 
 ```
 # R code:
