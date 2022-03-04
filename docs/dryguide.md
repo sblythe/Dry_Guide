@@ -222,7 +222,10 @@ This script will change to the _parental_ directory containing the downloaded da
 # describes.
 
 # AS WRITTEN, THE CODE WILL FAIL IF YOU HAVE UNDERSCORES IN YOUR SAMPLE NAMES
-# If this is an issue, one option is to alter the filenames of each file to drop
+# Best policy is to avoid using them. However, I have found that GenerateFASTQ will
+# automatically convert them to hyphens, which is nice. Not sure if it will always happen.
+
+# If this remains an issue, one option is to alter the filenames of each file to drop
 # the underscores, which isn't too hard if you know how to do it either on the
 # command line, or even in R. Another alternative is to parse the command below 
 # where the unique names are pulled out to accurately capture the first two fields
@@ -254,7 +257,7 @@ cd $parentdir/$downloaddir
 # it will move anything that has appeared in the subdirectories up to the parental
 # downloaded directory. This shouldn't be a problem, but we find ways to make 
 # new problems all the time. 
-mv */* .
+mv */*/* .
 
 # get the unique sample names (<sample_name_from_sheet>) and sample 
 # numbers (S[number]). Write these to a file in the downloaded directory.
@@ -277,29 +280,3 @@ do
 done
 ```
 
-## Changing all the underscores in a sample name/filename to hyphens
-
-In the code above, if the sample names in the sample sheet contained underscores, there will be an error because the call to `awk` will inappropriately only return the first two underscore-delimited fields, which in that case will be subsets of the sample name, as opposed to the `sample name` plus the `S[number]` field. One way to fix this is in R, where some of the string-manipulating functions are easier to implement, and renaming of files is straightforward.
-
-!!! Note
-        This solution similarly makes certain additional assumptions, namely that although the sample names include underscores, that hopefully at least none of the sample names themselves contain the text `_S` followed by a number. If this is the case, then this solution won't work. Fortunately, this type of double error is not one that you would make more than once, hopefully.
-
-!!! Note
-        If you have to run this, the easiest way to do it is to run it on all the files once they have been moved up from the individual subdirectories. This means that you should 1) move the files out of the subdirectories manually (see the script above), 2) run the code below. You could be creative and edit the code to operate on the individual subdirectories, and not have to do this all in parts.
-
-```
-# R code:
-
-dir = <enter the path to the directory where you would like to change the names>
-
-old = list.files(dir)
-common = substring(text = old, regexpr('_S[1-9]', old), nchar(old))
-
-replacement = gsub(substring(text = old, 1, (regexpr('_S[1-9]', old)-1)), pattern = "_", replacement = "-")
-
-newname = paste0(replacement, common)
-
-# check that the new names are accurate! then uncomment the line below and run. 
-
-# file.rename(from = paste0(dir,old), to = paste0(dir, newname)
-```
