@@ -10,9 +10,13 @@ __[Quest Docs](http://www.it.northwestern.edu/research/user-services/quest/index
 
 ## Introduction/Overview
 
-New users will likely have some confusion about how all of this works. This guide is meant to help you with that. As a high-level overview: we can use a remote computing cluster called Quest to run processor-intensive jobs without tying down our local computation resources. Quest is a collection of "Nodes" of many multithreaded processors, as well as disk storage space. You can think of Quest as a remote computer that you can interact with solely through the command line. The computational resources on Quest are parceled out into 'allocations'. The most important allocation for our purposes is __b1042__. This is the "Genomics" buy-in allocation. Anyone at NU can sign up for access to __b1042__, and once they have access, they can begin submitting jobs to this system. When you log in to Quest, however, you aren't 'within' __b1042__, instead, when you log in, you are dropped off in your home directory (in terms of the file-system), and are using (in terms of computational resources) what is referred to as a __login node__. While __b1042__ has many cores and much memory available for computational processes, __login nodes__ have relatively less computational power. Therefore, if we have processor-instensive jobs to perform, we don't want to use a __login node__, instead we want to use __b1042__. To do this, we have to ask Quest to do our jobs on __b1042__ through one of two methods: as an 'interactive session' or as a 'batch submission'. Below, I describe how to initiate both of these approaches. 
+New users will likely have some confusion about how all of this works. This guide is meant to help you with that. As a high-level overview: we can use a remote computing cluster called Quest to run processor-intensive jobs without tying down our local computation resources. Quest is a collection of "Nodes" of many multithreaded processors, as well as disk storage space. You can think of Quest as a remote computer that you can interact with solely through the command line. The computational resources on Quest are parceled out into 'allocations'. The two most important allocations for our purposes are __b1042__ and __b1182__. __b1042__ is the "Genomics" buy-in allocation. Anyone at NU can sign up for access to __b1042__, and once they have access, they can begin submitting jobs to this system. __b1182__ is the Blythe Lab's personal allocation, with (at the moment) 4 TB of storage space. Jobs for __b1042__ can be stored in directories within __b1182__.
 
-Storage is another matter: each user's home directory has a limited amount of *private* storage that will be indefinitely maintained (and backed up). This is on the order of 80 Gigabytes, which isn't much. There are two other storage options: within the *Scratch Space* within __b1042__ as well as within the lab's own dedicated project, __p31603__. *Scratch Space* is essentially a wild-west first-come-first-served disk space for *all* users of __b1042__ to *temoprarily* store files that they are using in a project. It is vast (~200 Terabytes), not backed up, and files over 30-days in age are deleted regularly. The Blythe Lab has a directory within __b1042__ created within this *Scratch Space* that lab members can use to temporarily store files if necessary. In addition, the Blythe Lab has a dedicated "project" within Quest (__p31603__)that affords us 500 Gigabytes of storage space. This is the location where we should focus on staging our computational tasks. 
+When you log in to Quest, however, you aren't 'within' __b1042__ or __b1182__, instead, when you log in, you are dropped off in your home directory (in terms of the file-system), and are using (in terms of computational resources) what is referred to as a __login node__. While __b1042__ has many cores and much memory available for computational processes, __login nodes__ have relatively less computational power. Therefore, if we have processor-instensive jobs to perform, we don't want to use a __login node__, instead we want to use __b1042__. To do this, we have to ask Quest to do our jobs on __b1042__ through one of two methods: as an 'interactive session' or as a 'batch submission'. Below, I describe how to initiate both of these approaches. 
+
+Storage is another matter: each user's home directory has a limited amount of *private* storage that will be indefinitely maintained (and backed up). This is on the order of 80 Gigabytes, which isn't much. There are three other storage options: within the *Scratch Space* within __b1042__, within the lab's allocation in __b1182__, as well as within the lab's own dedicated project, __p31603__. This latter project is an older allocation that may eventually be migrated to __b1182__. *Scratch Space* is essentially a wild-west first-come-first-served disk space for *all* users of __b1042__ to *temoprarily* store files that they are using in a project. It is vast (~200 Terabytes), not backed up, and files over 30-days in age are deleted regularly. The Blythe Lab has a directory within __b1042__ created within this *Scratch Space* that lab members can use to temporarily store files if necessary. 
+
+The Blythe Lab has a dedicated "project" within Quest (__p31603__)that affords us 500 Gigabytes of storage space. As mentioned above, this is an older allocation and may eventually be migrated to __b1182__. For now, all projects should be staged on __b1182__, although they may make reference to resources currently housed in __p31603__.
 
 In the following, I describe how to get access to Quest, how to use some of its unique features, and how to submit jobs. 
 
@@ -22,7 +26,7 @@ To gain access to Quest:
 
 Register new user with your NetID [here](https://app.smartsheet.com/b/form?EQBCT=9b3647a8cb2145929737ab4a0540cb46).
 		
-Apply to be added to the lab's partition/project/allocation (p31603) [here](https://app.smartsheet.com/b/form/797775d810274db5889b5199c4260328).
+Apply to be added to the lab's partition/project/allocations (p31603 and b1182) [here](https://app.smartsheet.com/b/form/797775d810274db5889b5199c4260328).
 Allocation manager: Shelby Blythe, `shelby.blythe@northwestern.edu`
 		
 Apply to be added to partition b1042 [here](https://app.smartsheet.com/b/form/797775d810274db5889b5199c4260328).
@@ -90,20 +94,22 @@ homedu
 More information is provided below to help install and use software.
 
 !!! Note
-    In general, we will not be saving files long-term anywhere on Quest! Most of your work will take place within the project directory __p31603__. All files should be stored on the lab's network accessible storage device/server. 
+    In general, we will not be saving files long-term anywhere on Quest! Most of your work will take place within the lab's allocation __b1182__. All files should be stored on the lab's network accessible storage device/server. 
 
 ## Projects
 
 Quest is broadly organized into projects (or partitions, or allocations). Projects have associated with them storage, nodes, and users.
 
-To determine what "groups" you have access to, enter `groups` on the command line. You should see at the very least `b1042` and `p31603` in the returned text. 
+To determine what "groups" you have access to, enter `groups` on the command line. You should see at the very least `b1042`, `b1182`, and `p31603` in the returned text. 
 
-The Blythe lab has access to one project, __p31603__. This is where we have 500 GB of total storage. This is where we will store any compiled software necessary for running our analyses, as well as stage computational tasks. 
+The Blythe lab has access to one specialized allocation, __b1182__. This is where we have 4 TB of total storage. This is the current location to perform Quest based tasks. Please keep in mind that while this is nice storage, any important products of an analysis should be backed up to the lab server. *No one but you is responsible for ensuring that your data is properly backed up!*
+
+The Blythe lab has access to one project, __p31603__. This is an older workspace and will eventually be migrated to __b1182__. This is where we have 500 GB of total storage. It currently houses some repositories for mapping, as well as a virtual environment for running our preferred read trimmer.  
 
 __b1042__ - The 'Genomics' Project has 200 Tb of space and 100 nodes associated with it. This space is shared with other labs and is designed for temporary use only. The space is available at `/projects/b1042/BlytheLab/`. By default, files are deleted after 30 days. One can submit jobs to `--partition=genomicsguestA` to use this partition, with a max job duration of 48hr. 
 
 !!! Note
-    Anyone who uses Quest should build your own folder under `/projects/p31603` with your name. You should only write and revise files under your project folder. You can read/copy data from elsewhere in __p31603__ but don't write/save any data to locations outside of your project folder. You could also store things on `/projects/b1042/BlytheLab`, but storage anywhere on __b1042__ is for 30 days only, so do not store anything here that you hope to maintain access to over a long period. We have limited space on __p31603__. This is also not a long-term location for storage, but rather a site where you import raw data, and save the output of processing, before you download the data back to long-term storage. 
+    Anyone who uses Quest should build your own folder under `/projects/b1182` with your name. You should only write and revise files under your project folder. You can read/copy data from elsewhere in __b1182__ (or __p31603__) but don't write/save any data to locations outside of your project folder. You could also store things on `/projects/b1042/BlytheLab`, but storage anywhere on __b1042__ is for 30 days only, so do not store anything here that you hope to maintain access to over a long period. We have limited space on __p31603__ and __b1182__. This is also not a long-term location for storage, but rather a site where you import raw data, and save the output of processing, before you download the data back to long-term storage on the lab server. 
 
 ## Running interactive jobs on Quest
 
@@ -128,6 +134,10 @@ If you are all set up to use the lab's resources on Quest, you should be able to
 
 Jobs on Quest are managed by [SLURM](https://slurm.schedmd.com/). Scripts for SLURM submissions differ slightly from regular bash scripts in that they have an extensive header that passes commands to SLURM that helps it determine how many resources to allocate to the job. Please see the `/projects/p31603/Quest_Setup_Test_Script_PE.sh` for an example of a script that is set up to run via the batch scheduler. A set of brief instructions on how to run the test script is included on a later page in this guide.
 
+## NU Resources for learning about Quest:
+
+There are useful guides provided by NU Research Computing on how to use Quest. Please refer [to this guide](https://services.northwestern.edu/TDClient/30/Portal/KB/ArticleDet?ID=1964) for general inquiries on use of this resource.
+
 ## Deciding How Much Resources to Ask For
 
 This is tricky to guess. In general, you want to ask for about 2x more resources than your job actually takes. On the job scheduler, you need to request an amount of cluster up-time, a number of cores/cpus, and an amount of memory per cpu.
@@ -145,7 +155,222 @@ Once you have an idea of how your jobs run, you can adjust the following as nece
 #SBATCH --mem-per-cpu=8G
 ```
 
-As mentioned above, this could take some time to schedule, but it should be sufficient to complete the job. 
+As mentioned above, this could take some time to schedule, but it should be sufficient to complete the job.
+
+## Running jobs in parallel, rather than in series
+
+A typical task we perform on Quest is to trim and map Illumina reads. We will have anywhere from 1 to >12 samples that we need to perform this on, and we essentially do the same thing to each sample. An old-timey way to do this is to write for-loops in our scripts and loop over the input filenames for each stage of the procedure. This "in series" approach works, but it doesn't take advantage of the fact that we can start all of the tasks at the same time in parallel for each input file. Running samples in parallel will accomplish the task of trimming and mapping in a fraction of the time compared with running them in series, typically because we end up reserving more resources in these cases for each individual task.
+
+This is accomplished on SLURM by using the `array` option, and by carefully setting up a batch request to allocate all of the necessary resources. 
+
+Within the header for a `SBATCH` script, one can specify the total number of jobs to perform in parallel using the `array` option. The batch job then sort of operates like a for-loop, in that we can take each starting file, and perform a task on it, by addressing it by an index number in a list. Say we have 12 samples in an experiment that we want to process in parallel. Then, you specify this by using a (zero-based) array:
+
+```
+...
+#SBATCH --array=0-11
+...
+```
+
+What this will do is set up 12 processes to run in parallel, each with a `SLURM_ARRAY_TASK_ID` from 0 to 11. Then, if you make a list of file names (in this example, housed within a directory "Test"):
+
+```
+# assign to the object `name_list` the filenames in the Raw_Data directory
+# that contain the characters "_R1_". 
+
+name_list=(/projects/b1182/Test/Raw_Data/*_R1_*)
+```
+
+Then, assign an input filename that will be specific to the specific array that lanuches. Use the index position of the arrays (reported as an environment variable) to select one of the list elements:
+
+```
+file=${name_list[$SLURM_ARRAY_TASK_ID]}
+```
+
+Such an array script will initiate N independent instances of your script, each with a single array task id value. The environment variable `SLURM_ARRAY_TASK_ID` will report that single value, and subset the name list, so that particular instance of the script will only operate on that single indexed file.
+
+!!! Important
+        When re-writing scripts to operate on an array, be mindful that all of your individual samples will be processed simultaneously, and if you write temporary files to an output directory, they need to have unique filenames. 
+
+Running array scripts are best handled by dividing the task into two parts: a script that handles the dispensing of arrayed tasks, and a script that will be run by each of the individual arrays. 
+
+For instance, the following script handles the setup of an array for trimming and mapping 12 ChIP-seq samples:
+
+```
+#!/bin/bash
+#SBATCH --account=b1042
+#SBATCH --partition=genomicsguestA
+#SBATCH -t 20:00:00          
+#SBATCH --nodes=1
+#SBATCH --cpus-per-task=4
+#SBATCH --mem-per-cpu=8G
+#SBATCH --array=0-11
+#SBATCH --job-name="ArrayTest_\${SLURM_ARRAY_TASK_ID}"
+#SBATCH --output=Logs/outlog.%A_%a
+#SBATCH --error=Logs/screenlog.%A_%a
+
+# This script will run our standard trimming and mapping approach on 
+# all samples in parallel. It is much faster than doing them in series. 
+# 1) ensure that the 'array' parameter above is the size of the number
+# of samples in the experiment. Start with zero. 
+# 2) change the 'basedir' and the path to the filenames ("name_list" definition)
+# below.
+# 3) Ensure that you've made a directory (Logs) in the base directory.
+#
+# You should be good to go. It refers to a separate script to run the 
+# trimming and mapping. This script just passes the files to the script.
+
+basedir=/projects/b1182/Test
+
+## make destinations
+mkdir ${basedir}/Trimmed_Reads
+mkdir ${basedir}/Mapped_Reads
+
+name_list=(/projects/b1182/Test/Raw_Data/*_R1_*) # the length of this list must equal the array length above.
+
+input=${name_list[$SLURM_ARRAY_TASK_ID]}
+
+# We've packed the usual script into a new script that is designed to take
+# single filename inputs (rather than looping). It has three input values:
+# 1) the base directory
+# 2) the value of "input", defined above
+# 3) the number of cores, defined above
+
+script_path="/projects/b1182/Paired_End_Trimming_and_Mapping_Single_Sample.sh"
+
+. "$script_path" \
+${basedir} \
+${input} \
+${SLURM_CPUS_PER_TASK}
+```
+
+It refers to a trimming and mapping script, `Paired_End_Trimming_and_Mapping_Single_Sample.sh`:
+
+```
+#!/bin/bash
+
+# this is a basic script for trimming and mapping paired end reads.
+# It takes as input options:
+# 1) for the base directory
+# 2) for the filename of read 1
+# 3) for the number of cores per task, as defined in slurm
+
+# IT ASSUMES: that the raw data is in the base directory, and that
+# the destination directories will be in the base directory as well.
+
+# It uses 2G of memory per cpu, which is hard-coded. 
+
+basedir=$1
+filename=$(basename $2)
+cores=$3
+
+echo "Base directory: $basedir";
+echo "Read1 Filename: $filename";
+
+module load python/3.8.4
+module load fastqc/0.11.5
+module load bowtie2/2.4.1
+module load samtools/1.10.1
+module load picard/2.21.4
+
+rawdir=${basedir}/Raw_Data
+trimdir=Trimmed_Reads
+mapdir=Mapped_Reads
+index=/projects/p31603/Bowtie_Indices/dm6/dm6
+
+source /projects/p31603/TrimGaloreEnv/bin/activate
+
+echo "path to the first read"
+echo ${rawdir}/${filename}
+filename2=$(echo $filename | sed "s/_R1_/_R2_/g")
+echo "path to the second read"
+echo ${rawdir}/${filename2}
+echo
+
+trim_galore \
+-o ${basedir}/${trimdir} \
+--gzip \
+--fastqc \
+--cores ${cores} \
+--paired ${rawdir}/${filename} ${rawdir}/${filename2}
+
+deactivate
+
+tfilename=$(echo $filename | sed "s/.fastq.gz/_val_1.fq.gz/g")
+tfilename2=$(echo $tfilename | sed "s/_val_1/_val_2/g")
+tfilename2=$(echo $tfilename2 | sed "s/_R1_/_R2_/g")
+
+echo "Next we use Bowtie2 on the output of Trimgalore"
+echo ${basedir}/${trimdir}/${tfilename}
+echo ${basedir}/${trimdir}/${tfilename2}
+
+shortname=$(echo $tfilename |cut -d_ -f1)
+echo
+echo "The output for this step will have a filename that contains"
+echo ${shortname}
+echo
+
+bowtie2 \
+-p ${cores} \
+-X 2000 \
+-x $index \
+-1 ${basedir}/${trimdir}/${tfilename} \
+-2 ${basedir}/${trimdir}/${tfilename2} \
+ 2> ${basedir}/${mapdir}/${shortname}.bowtie.mapping.log.txt | \
+samtools view \
+-bS - > ${basedir}/${mapdir}/${shortname}.mapped.bam
+
+samtools sort -@ ${cores} -m 2G -T ${basedir}/${mapdir}/temp${shortname} \
+-o ${basedir}/${mapdir}/temp${shortname}1.bam \
+${basedir}/${mapdir}/${shortname}.mapped.bam
+
+java -jar /software/picard/2.21.4/bin/picard.jar CleanSam \
+INPUT=${basedir}/${mapdir}/temp${shortname}1.bam \
+OUTPUT=${basedir}/${mapdir}/temp${shortname}2.bam
+
+java -jar /software/picard/2.21.4/bin/picard.jar MarkDuplicates \
+INPUT=${basedir}/${mapdir}/temp${shortname}2.bam \
+OUTPUT=${basedir}/${mapdir}/${shortname}.mapped.md.bam \
+METRICS_FILE=${basedir}/${mapdir}/${shortname}.dup.metrics.txt
+
+rm ${basedir}/${mapdir}/temp${shortname}1.bam \
+${basedir}/${mapdir}/temp${shortname}2.bam \
+${basedir}/${mapdir}/${shortname}.mapped.bam
+
+samtools flagstat ${basedir}/${mapdir}/${shortname}.mapped.md.bam > \
+${basedir}/${mapdir}/${shortname}.mapped.md.bam.FLAGSTAT.txt
+
+samtools index ${basedir}/${mapdir}/${shortname}.mapped.md.bam
+```
+
+The first script would be passed to `sbatch`, and so long as the second one is found at the path indicated in the first, it should operate on the designated files.
+
+### Issues with running arrays
+
+In setting this up, I've run into problems from time to time with memory allocations. When the script above is executed, it will likely set up 12 4-core tasks, with each core being allocated 8 GB of RAM. This is more resource heavy than when this is done in parallel. If not enough memory is allocated per core, then the task will fail with an "out of memory" error code. Sometimes you might see a more foreboding "Node Fail" error message. To troubleshoot this, the line:
+
+```
+#SBATCH --mem-per-cpu=8G
+```
+
+can be commented out and replaced with:
+
+```
+#SBATCH --mem=0
+```
+
+Specifying `--mem=0` will allocate the maximum available memory for the node to the task at hand, and you can then determine how much memory the task took to run by querying the effort needed to complete the job:
+
+```
+seff <job_ID>
+```
+
+Where `<job_ID>` is the identification of a particular job that you can see by asking:
+
+```
+sacct -X
+```
+
+These commands are described in more detail in the following section. Once you find the memory used for the job, assume that the memory indicated by `seff` is the total amount of memory used by the total number of cores dedicated to the job. You can then divide the memory amount by the number of cores, and add 25-50% for padding. This can then be the amount of memory you allocate for your jobs once you uncomment the original `--mem-per-cpu=` option (and delete the `--mem=0` line) in the troubleshooting script.
 
 ## Monitoring SLURM Jobs on Quest
 
