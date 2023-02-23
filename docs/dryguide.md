@@ -161,7 +161,9 @@ As mentioned above, this could take some time to schedule, but it should be suff
 
 A typical task we perform on Quest is to trim and map Illumina reads. We will have anywhere from 1 to >12 samples that we need to perform this on, and we essentially do the same thing to each sample. An old-timey way to do this is to write for-loops in our scripts and loop over the input filenames for each stage of the procedure. This "in series" approach works, but it doesn't take advantage of the fact that we can start all of the tasks at the same time in parallel for each input file. Running samples in parallel will accomplish the task of trimming and mapping in a fraction of the time compared with running them in series, typically because we end up reserving more resources in these cases for each individual task.
 
-This is accomplished on SLURM by using the `array` option, and by carefully setting up a batch request to allocate all of the necessary resources. 
+For instance, mapping a complete PE150 HiSeq4000 dataset (~400 M pairs of reads) from 12 pooled libraries can take around 21 hours if performed in series, allocating 12 cores and 8 GB of memory per core. In contrast, when run in parallel (4 cores/sample, 8 GB of memory per core), the timing can be considerably shorter (3-4 hours). 
+
+Parallel processing is accomplished on SLURM by using the `array` option, and by carefully setting up a batch request to allocate all of the necessary resources. 
 
 Within the header for a `SBATCH` script, one can specify the total number of jobs to perform in parallel using the `array` option. The batch job then sort of operates like a for-loop, in that we can take each starting file, and perform a task on it, by addressing it by an index number in a list. Say we have 12 samples in an experiment that we want to process in parallel. Then, you specify this by using a (zero-based) array:
 
@@ -189,17 +191,17 @@ file=${name_list[$SLURM_ARRAY_TASK_ID]}
 Such an array script will initiate N independent instances of your script, each with a single array task id value. The environment variable `SLURM_ARRAY_TASK_ID` will report that single value, and subset the name list, so that particular instance of the script will only operate on that single indexed file.
 
 !!! Important
-        When re-writing scripts to operate on an array, be mindful that all of your individual samples will be processed simultaneously, and if you write temporary files to an output directory, they need to have unique filenames. 
+        When re-writing scripts to operate on an array, be mindful that all of your individual samples will be processed simultaneously, and if you write temporary files to an output directory, they need to have unique filenames. See the example script below for a way of dealing with this (in the calls to `samtools sort` and `picard CleanSam`).
 
 Running array scripts are best handled by dividing the task into two parts: a script that handles the dispensing of arrayed tasks, and a script that will be run by each of the individual arrays. 
 
-For instance, the following script handles the setup of an array for trimming and mapping 12 ChIP-seq samples:
+For instance, the following script handles the setup of an array for trimming and mapping 12 ChIP-seq samples. Using one node, it sets aside 4 cpus per 12 tasks (48 total cpus). Each cpu will have at most 8 GB of memory. This memory value was arrived at empirically, as described in the following section. It names the jobs based on the task ID. Unlike typical jobs, each arrayed job will show up as an independent line in the job scheduler. Both for the job name, as well as for the output logs, it is good to include identifiers that distinguish between the different arrayed instances. 
 
 ```
 #!/bin/bash
 #SBATCH --account=b1042
 #SBATCH --partition=genomicsguestA
-#SBATCH -t 20:00:00          
+#SBATCH -t 8:00:00          
 #SBATCH --nodes=1
 #SBATCH --cpus-per-task=4
 #SBATCH --mem-per-cpu=8G
@@ -344,6 +346,9 @@ samtools index ${basedir}/${mapdir}/${shortname}.mapped.md.bam
 
 The first script would be passed to `sbatch`, and so long as the second one is found at the path indicated in the first, it should operate on the designated files.
 
+!!! Note
+        The above script examples are meant to provide a starting point for developing your own approaches. The resource allocation was sufficient for mapping PE150 samples with between 30M and 50M pairs of reads. If you have fewer reads (or maybe shorter reads), this will be over-specified. Similarly, larger datasets may require additional resources (most likely more RAM). The section below suggests a way to figure out how much RAM to allocate to this kind of a request.
+
 ### Issues with running arrays
 
 In setting this up, I've run into problems from time to time with memory allocations. When the script above is executed, it will likely set up 12 4-core tasks, with each core being allocated 8 GB of RAM. This is more resource heavy than when this is done in parallel. If not enough memory is allocated per core, then the task will fail with an "out of memory" error code. Sometimes you might see a more foreboding "Node Fail" error message. To troubleshoot this, the line:
@@ -371,6 +376,8 @@ sacct -X
 ```
 
 These commands are described in more detail in the following section. Once you find the memory used for the job, assume that the memory indicated by `seff` is the total amount of memory used by the total number of cores dedicated to the job. You can then divide the memory amount by the number of cores, and add 25-50% for padding. This can then be the amount of memory you allocate for your jobs once you uncomment the original `--mem-per-cpu=` option (and delete the `--mem=0` line) in the troubleshooting script.
+
+In the script above, for instance, it failed if I assigned 5 GB of memory per cpu (total = 20 GB). Following a re-run with `--mem=0`, I found that the samples required between 22 and 25 GB of memory total (5.5 to 6.25 GB per cpu). I therefore specified 8 GB per cpu in the final script and this provides sufficient headroom for the job to complete without error.
 
 ## Monitoring SLURM Jobs on Quest
 
