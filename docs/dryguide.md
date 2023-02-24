@@ -116,7 +116,14 @@ __b1042__ - The 'Genomics' Project has 200 Tb of space and 100 nodes associated 
 If you are running a few simple commands or want to experiment with files directly you can start an interactive session on Quest. The command below will give you access to a node where you can run your commands. 
 
 ```
-srun -A b1042 --partition=genomicsguestA -N 1 -n 24 --mem=64G --time=12:00:00 --pty bash -i 
+srun -A b1042 \
+--partition=genomicsguestA \
+-N 1 \
+-n 24 \
+--mem=64G \
+--time=12:00:00 \
+--pty bash \
+-i 
 ```
 
 !!! Important
@@ -227,7 +234,8 @@ basedir=/projects/b1182/Test
 mkdir ${basedir}/Trimmed_Reads
 mkdir ${basedir}/Mapped_Reads
 
-name_list=(/projects/b1182/Test/Raw_Data/*_R1_*) # the length of this list must equal the array length above.
+name_list=(/projects/b1182/Test/Raw_Data/*_R1_*) 
+# the length of this list must equal the array length above.
 
 input=${name_list[$SLURM_ARRAY_TASK_ID]}
 
@@ -378,6 +386,10 @@ sacct -X
 These commands are described in more detail in the following section. Once you find the memory used for the job, assume that the memory indicated by `seff` is the total amount of memory used by the total number of cores dedicated to the job. You can then divide the memory amount by the number of cores, and add 25-50% for padding. This can then be the amount of memory you allocate for your jobs once you uncomment the original `--mem-per-cpu=` option (and delete the `--mem=0` line) in the troubleshooting script.
 
 In the script above, for instance, it failed if I assigned 5 GB of memory per cpu (total = 20 GB). Following a re-run with `--mem=0`, I found that the samples required between 22 and 25 GB of memory total (5.5 to 6.25 GB per cpu). I therefore specified 8 GB per cpu in the final script and this provides sufficient headroom for the job to complete without error.
+
+### Questions about performance
+
+Running 12 jobs in series with 12 cores and 8 GB memory per core takes about 21 hours. 12 jobs in parallel with 4 cores per job and 8 GB memory per core takes about 3-4 hours. This is not a proportional decrease in runtime, and it is possible that conditions could be found to map reads on the order of 2 hours or less. Most likely the reason for the difference in performance is the difference in the number of cores assigned to the job. In addition, the timing comparison above (although the same amount of RAM is allocated to the jobs) has different hard-coded memory usage (4 GB for the series, 2 GB for parallel in calls to `samtools`). *At some point, we may find that we are asking for too much in the way of resources to get our jobs done quickly.* How fast do we really need the trimming and mapping to be? If the performance of these scripts needs to be faster for some reason, we could try adding more cores (try +2) per job. At the moment, I'm not sure how that affects the memory requirements, as having 6 cores/array would mean we could get by with ~6 GB of memory to reach the >32 GB value we decided on using above. This is an open question at the moment in terms of how much we can optimize within the constraints of using Quest.
 
 ## Monitoring SLURM Jobs on Quest
 
