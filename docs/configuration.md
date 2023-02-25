@@ -125,3 +125,26 @@ bowtie2-build --threads 16 ../../Genomes/Khost_Larracuente_2017_Repbase.txt dmRe
 ```
 
 This goes super quick. All done.
+
+# Downloading the Clogima albipunctata genome
+
+I navigated to the DNAZoo website. The link under the Clogmia albipunctata genome for the current assembly (v6) seemed to be broken. I managed to find a download at:
+
+(https://dnazoo.s3.wasabisys.com/index.html?prefix=Clogmia_albipunctata__clogmia.6/)
+
+Date: 2/25/2023
+
+This was manually downloaded and copied to the Genomes directory in p31603, filename `clogmia.6_HiC.fasta.gz`
+
+# Bowtie index for C. alb
+
+I set up an interactive session on b1042 as described above. Then:
+
+```
+module add bowtie2
+cd Bowtie_Indices
+mkdir Calb6
+bowtie2-build --threads 16 ../../Genomes/clogmia.6_HiC.fasta.gz calb6
+```
+
+
