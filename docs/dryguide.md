@@ -168,7 +168,7 @@ As mentioned above, this could take some time to schedule, but it should be suff
 
 A typical task we perform on Quest is to trim and map Illumina reads. We will have anywhere from 1 to >12 samples that we need to perform this on, and we essentially do the same thing to each sample. An old-timey way to do this is to write for-loops in our scripts and loop over the input filenames for each stage of the procedure. This "in series" approach works, but it doesn't take advantage of the fact that we can start all of the tasks at the same time in parallel for each input file. Running samples in parallel will accomplish the task of trimming and mapping in a fraction of the time compared with running them in series, typically because we end up reserving more resources in these cases for each individual task.
 
-For instance, mapping a complete PE150 HiSeq4000 dataset (~400 M pairs of reads) from 12 pooled libraries can take around 21 hours if performed in series, allocating 12 cores and 8 GB of memory per core. In contrast, when run in parallel (4 cores/sample, 8 GB of memory per core), the timing can be considerably shorter (3-4 hours). 
+For instance, mapping a complete PE150 HiSeq4000 dataset (~400 M pairs of reads) from 12 pooled libraries can take around 21 hours if performed in series, allocating 12 cores and 8 GB of memory per core. In contrast, when run in parallel (12 cores/sample, 8 GB of memory per core), the timing can be considerably shorter. In this case, an individual sample can be processed in as little as 1.5 to 2 hours, but the whole job can take longer than 2 hours since the job scheduler may penalize you for requesting so many resources (in total: 12 x 12 cores, 144 x 8 GB of memory).
 
 Parallel processing is accomplished on SLURM by using the `array` option, and by carefully setting up a batch request to allocate all of the necessary resources. 
 
@@ -198,24 +198,27 @@ file=${name_list[$SLURM_ARRAY_TASK_ID]}
 Such an array script will initiate N independent instances of your script, each with a single array task id value. The environment variable `SLURM_ARRAY_TASK_ID` will report that single value, and subset the name list, so that particular instance of the script will only operate on that single indexed file.
 
 !!! Important
-        When re-writing scripts to operate on an array, be mindful that all of your individual samples will be processed simultaneously, and if you write temporary files to an output directory, they need to have unique filenames. See the example script below for a way of dealing with this (in the calls to `samtools sort` and `picard CleanSam`).
+        When re-writing scripts to operate on an array, be mindful that all of your individual samples will be processed simultaneously, and if you write temporary files to an output directory, they need to have unique filenames. See the example script below for a way of dealing with this (in the calls to `samtools sort` and `picard CleanSam`). Similarly, scripts should be re-written to purge temporary files as soon as they are no longer needed, rather than just throwing them away at the end of the process. The reason for this is because required disk space for storage can balloon significantly when using temporary files, especially if all those temporary files are being generated simultaneously, instead of once per sample.
 
 Running array scripts are best handled by dividing the task into two parts: a script that handles the dispensing of arrayed tasks, and a script that will be run by each of the individual arrays. 
 
-For instance, the following script handles the setup of an array for trimming and mapping 12 ChIP-seq samples. Using one node, it sets aside 4 cpus per 12 tasks (48 total cpus). Each cpu will have at most 8 GB of memory. This memory value was arrived at empirically, as described in the following section. It names the jobs based on the task ID. Unlike typical jobs, each arrayed job will show up as an independent line in the job scheduler. Both for the job name, as well as for the output logs, it is good to include identifiers that distinguish between the different arrayed instances. 
+For instance, the following script handles the setup of an array for trimming and mapping 12 ChIP-seq samples. Using one node, it sets aside 12 cpus per 12 tasks (144 total cpus). Each cpu will have at most 8 GB of memory. This memory value was arrived at empirically, as described in the following section. It turns out that this is not optimal, as we discuss further below. The scheduler names the jobs based on the task ID. Unlike typical jobs, each arrayed job will show up as an independent line in the job scheduler. Both for the job name, as well as for the output logs, it is good to include identifiers that distinguish between the different arrayed instances. 
 
 ```
 #!/bin/bash
 #SBATCH --account=b1042
 #SBATCH --partition=genomicsguestA
-#SBATCH -t 8:00:00          
+#SBATCH -t 4:00:00          
 #SBATCH --nodes=1
-#SBATCH --cpus-per-task=4
-#SBATCH --mem-per-cpu=8G
+#SBATCH --cpus-per-task=12
+# #SBATCH --mem=0                 ## For troubleshooting only
+#SBATCH --mem-per-cpu=8G 
 #SBATCH --array=0-11
 #SBATCH --job-name="ArrayTest_\${SLURM_ARRAY_TASK_ID}"
 #SBATCH --output=Logs/outlog.%A_%a
 #SBATCH --error=Logs/screenlog.%A_%a
+#SBATCH --mail-type=ALL
+#SBATCH --mail-user=shelby.blythe@northwestern.edu
 
 # This script will run our standard trimming and mapping approach on 
 # all samples in parallel. It is much faster than doing them in series. 
@@ -234,8 +237,7 @@ basedir=/projects/b1182/Test
 mkdir ${basedir}/Trimmed_Reads
 mkdir ${basedir}/Mapped_Reads
 
-name_list=(/projects/b1182/Test/Raw_Data/*_R1_*) 
-# the length of this list must equal the array length above.
+name_list=(/projects/b1182/Test/Raw_Data/*_R1_*) # the length of this list must equal the array length above.
 
 input=${name_list[$SLURM_ARRAY_TASK_ID]}
 
@@ -251,9 +253,11 @@ script_path="/projects/b1182/Paired_End_Trimming_and_Mapping_Single_Sample.sh"
 ${basedir} \
 ${input} \
 ${SLURM_CPUS_PER_TASK}
+
+# END 
 ```
 
-It refers to a trimming and mapping script, `Paired_End_Trimming_and_Mapping_Single_Sample.sh`:
+The script above refers to a trimming and mapping script, `Paired_End_Trimming_and_Mapping_Single_Sample.sh`. It does the actual trimming and mapping, as follows:
 
 ```
 #!/bin/bash
@@ -267,7 +271,7 @@ It refers to a trimming and mapping script, `Paired_End_Trimming_and_Mapping_Sin
 # IT ASSUMES: that the raw data is in the base directory, and that
 # the destination directories will be in the base directory as well.
 
-# It uses 2G of memory per cpu, which is hard-coded. 
+# It uses 4G of memory per cpu, which is hard-coded. 
 
 basedir=$1
 filename=$(basename $2)
@@ -329,22 +333,24 @@ bowtie2 \
 samtools view \
 -bS - > ${basedir}/${mapdir}/${shortname}.mapped.bam
 
-samtools sort -@ ${cores} -m 2G -T ${basedir}/${mapdir}/temp${shortname} \
+samtools sort -@ ${cores} -m 4G -T ${basedir}/${mapdir}/temp${shortname} \
 -o ${basedir}/${mapdir}/temp${shortname}1.bam \
 ${basedir}/${mapdir}/${shortname}.mapped.bam
+
+rm ${basedir}/${mapdir}/${shortname}.mapped.bam
 
 java -jar /software/picard/2.21.4/bin/picard.jar CleanSam \
 INPUT=${basedir}/${mapdir}/temp${shortname}1.bam \
 OUTPUT=${basedir}/${mapdir}/temp${shortname}2.bam
+
+rm ${basedir}/${mapdir}/temp${shortname}1.bam
 
 java -jar /software/picard/2.21.4/bin/picard.jar MarkDuplicates \
 INPUT=${basedir}/${mapdir}/temp${shortname}2.bam \
 OUTPUT=${basedir}/${mapdir}/${shortname}.mapped.md.bam \
 METRICS_FILE=${basedir}/${mapdir}/${shortname}.dup.metrics.txt
 
-rm ${basedir}/${mapdir}/temp${shortname}1.bam \
-${basedir}/${mapdir}/temp${shortname}2.bam \
-${basedir}/${mapdir}/${shortname}.mapped.bam
+rm ${basedir}/${mapdir}/temp${shortname}2.bam
 
 samtools flagstat ${basedir}/${mapdir}/${shortname}.mapped.md.bam > \
 ${basedir}/${mapdir}/${shortname}.mapped.md.bam.FLAGSTAT.txt
@@ -359,7 +365,7 @@ The first script would be passed to `sbatch`, and so long as the second one is f
 
 ### Issues with running arrays
 
-In setting this up, I've run into problems from time to time with memory allocations. When the script above is executed, it will likely set up 12 4-core tasks, with each core being allocated 8 GB of RAM. This is more resource heavy than when this is done in parallel. If not enough memory is allocated per core, then the task will fail with an "out of memory" error code. Sometimes you might see a more foreboding "Node Fail" error message. To troubleshoot this, the line:
+In setting this up, I've run into problems from time to time with memory allocations. When the script above is executed, it will likely set up 12 12-core tasks, with each core being allocated 8 GB of RAM. This is more resource heavy than when this is done in series. If not enough memory is allocated per core, then the task will fail with an "out of memory" error code. Sometimes you might see a more foreboding "Node Fail" error message. To troubleshoot this, the line:
 
 ```
 #SBATCH --mem-per-cpu=8G
@@ -383,13 +389,12 @@ Where `<job_ID>` is the identification of a particular job that you can see by a
 sacct -X
 ```
 
-These commands are described in more detail in the following section. Once you find the memory used for the job, assume that the memory indicated by `seff` is the total amount of memory used by the total number of cores dedicated to the job. You can then divide the memory amount by the number of cores, and add 25-50% for padding. This can then be the amount of memory you allocate for your jobs once you uncomment the original `--mem-per-cpu=` option (and delete the `--mem=0` line) in the troubleshooting script.
+These commands for monitoring SLURM jobs are described in more detail in the next section. In the scripts above, I eventually settled on 12 cores and 8 GB per core based on trial and error, seeking to have the shortest per-sample wall clock time (as reported by `seff`). However:
 
-In the script above, for instance, it failed if I assigned 5 GB of memory per cpu (total = 20 GB). Following a re-run with `--mem=0`, I found that the samples required between 22 and 25 GB of memory total (5.5 to 6.25 GB per cpu). I therefore specified 8 GB per cpu in the final script and this provides sufficient headroom for the job to complete without error.
+`seff` reports that in the end, we only use around 25% of the allocated total 96 GB of RAM (~25 GB). It turns out that we need 8 GB per core (even though we only use 4 GB per core in the `samtools sort` command) because the `picard MarkDuplicates` commands end up needing >6 GB per core to do their job. We are running `MarkDuplicates` with default parameters, so we could dive in and figure out the memory management options for this program, but I have not yet done that. If we specify 6 GB or less memory per core, some of the jobs fail because `picard` will require more than that to complete.
 
-### Questions about performance
-
-Running 12 jobs in series with 12 cores and 8 GB memory per core takes about 21 hours. 12 jobs in parallel with 4 cores per job and 8 GB memory per core takes about 3-4 hours. This is not a proportional decrease in runtime, and it is possible that conditions could be found to map reads on the order of 2 hours or less. Most likely the reason for the difference in performance is the difference in the number of cores assigned to the job. In addition, the timing comparison above (although the same amount of RAM is allocated to the jobs) has different hard-coded memory usage (4 GB for the series, 2 GB for parallel in calls to `samtools`). *At some point, we may find that we are asking for too much in the way of resources to get our jobs done quickly.* How fast do we really need the trimming and mapping to be? If the performance of these scripts needs to be faster for some reason, we could try adding more cores (try +2) per job. At the moment, I'm not sure how that affects the memory requirements, as having 6 cores/array would mean we could get by with ~6 GB of memory to reach the >32 GB value we decided on using above. This is an open question at the moment in terms of how much we can optimize within the constraints of using Quest.
+!!! Note
+        Another issue that comes up is that asking for 12 x 12 cores plus 8 GB RAM per core may be seen as a 'big ask' depending on how busy Quest is. If each array takes a while to transition from "Pending" to "Running", then the time savings associated with the arrayed jobs is reduced. This script above works as well with 4 cores (instead of 12) per job, and I haven't had any issues with slurm delays when asking for this amount of resources. The trade off is that it could take 5-6 hours for the job to complete. The point here is that there are a number of ways to ask for resources, and if you observed significant delays in the job running, try reducing your ask for cores. 
 
 ## Monitoring SLURM Jobs on Quest
 
