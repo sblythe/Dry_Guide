@@ -529,3 +529,431 @@ do
 done
 ```
 
+## Current Approach for Routine Trimming, Mapping, and G-Ranging of Paired-End Illumina Data
+
+We have a routine approach for -- using Quest -- taking FastQ files from a Paired-End sequencing experiment, trimming adapter sequences, mapping to the `dm6` genome assembly, marking duplicates, indexing, and converting to a genomic ranges object in R. Typically, we start with raw data being delivered to the lab server, in a subdirectory named `Raw_Data` within an experiment-specific subdirectory, within a specific User's `HTseq` subdirectory.
+
+```
+Volumes
+    |__ BlytheLab_Files
+        |__ HTseq
+            |__ Shelby
+                |__ My_Experiment
+                    |__ Raw_Data
+```
+
+There may be additional directories within the `My_Experiment` directory corresponding to the containers in which the data is delivered. Take any raw data from directories downloaded from BaseSpace (for instance) that you hope to work with and consolidate it within the `Raw_Data` directory.
+
+!!! Important
+        The "My_Experiment" directory in the example above represents a particular sequencing run, for a specific experiment. Keep separate runs in separate directories. Do not modify the "Raw_Data" directory following the initial mapping. This includes adding data generated in other sequencing runs.
+
+What I do, is I create an identical `My_Experiment` directory in the proper location in Quest `/projects/b1182/Shelby/My_Experiment` and I copy the `Raw_Data` folder from the server to this location.
+
+The following scripts will take the raw data and yield BAM files and a GRangesList of a subset of the mapped reads. Importantly, they will impose this directory structure on Quest:
+
+```
+projects
+    |__ b1182
+        |__ Shelby
+            |__ My_Experiment
+                |__ Raw_Data
+                |__ Logs
+                |__ Trimmed_Reads
+                |__ Mapped_Reads
+                |__ GRanges
+```
+
+Once the scripts are complete, all but the original `Raw_Data` directory within `My_Experiment` should be copied back to the lab server to allow for work locally.
+
+### Overview of the approach
+
+We want to trim adapters, map, mark duplicates, and index each individual set of fastQ files. Once this is done, we want to generate a `GRangesList` object of the mapped reads that meet necessary criteria (do we want to exclude duplicates? what is the map-quality cutoff?). To do this, we use two separate "manager" scripts that set up a batch job on slurm. The first (Trimming and Mapping) uses an array to process in parallel all samples relatively quickly. The second (GRanges) Operates in a single thread to sequentially import a subset of each BAM file and convert it to GRanges format.
+
+Both of the "manager" scripts call their own "operator" scripts that do the necessary work. The "manager" scripts are edited to meet the specific needs of an experimental dataset. The "operator" scripts should be unchanged from use-to-use, however, if a user requires an "operator" script to do something different than standard, a user can make a custom variant. For instance, our standard GRanges importing script does not distinguish sizes of reads in a paired-end dataset. A user could make a variant that only imports 'small' reads (e.g., for importing ATAC-seq datasets).
+
+### Trimming and Mapping
+
+The typical "manager" script for Trimming and Mapping is called: `Mapping_and_Trimming_manager.sh` and the master copy can be found in the top level of `b1182`. __Users should copy this file to their "My_Experiment" directory and make modifications there that fit the specifics of their experiment.__ The script is written in such a way that a user will be guided to set up appropriately their target directory, and specify slurm conditions that are appropriate for their particular analysis. 
+
+`Mapping_and_Trimming_manager.sh`:
+
+```
+#!/bin/bash
+
+# This script will run our standard trimming and mapping approach on 
+# all samples in parallel. It is much faster than doing them in series.
+
+### First,  Make a directory in your base directory called "Logs"
+
+### Next: Change the following lines to fit your specific project: ###
+
+### 1) Estimate the amount of processing time you will need. ###
+### Four hours is good for a small project, twelve hours for a longer one ###
+
+#SBATCH -t 4:00:00
+
+### 2) How many samples are there? If 5, then set the array from 0-4 ###
+### If 8, then set the array from 0-7... etc... ###
+
+#SBATCH --array=0-31
+
+### 3) Give your job a name. Replace the indicated text with your job name ###
+
+#SBATCH --job-name="NG230622_\${SLURM_ARRAY_TASK_ID}"
+
+### 4) Enter your e-mail address to get updates ###
+
+#SBATCH --mail-user=shelby.blythe@northwestern.edu
+
+### The following lines should be the same regardless of the specific job ###
+### Save this file in the base directory, chmod it to be executable, and  ###
+### run it. ###
+
+#SBATCH --account=b1042
+#SBATCH --partition=genomicsguestA
+#SBATCH --nodes=1
+#SBATCH --cpus-per-task=12
+# #SBATCH --mem=0                 ## For troubleshooting only
+#SBATCH --mem-per-cpu=8G 
+#SBATCH --output=Logs/outlog.%A_%a
+#SBATCH --error=Logs/screenlog.%A_%a
+#SBATCH --mail-type=ALL
+
+### Next, specify the base directory that contains the data:
+
+basedir=/projects/b1182/Natalie/230622_Trl_Ez
+
+### the script will make the following directories:
+
+mkdir ${basedir}/Trimmed_Reads
+mkdir ${basedir}/Mapped_Reads
+
+### Finally, change the directory below to point to your raw data files.
+
+name_list=(/projects/b1182/Natalie/230622_Trl_Ez/Raw_Data/*_R1_*) # the length of this list must equal the array length above.
+
+input=${name_list[$SLURM_ARRAY_TASK_ID]}
+
+# We've packed the usual script into a new script that is designed to take
+# single filename inputs (rather than looping). It has three input values:
+# 1) the base directory
+# 2) the value of "input", defined above
+# 3) the number of cores, defined above
+
+script_path="/projects/b1182/Paired_End_Trimming_and_Mapping_Single_Sample.sh"
+
+. "$script_path" \
+${basedir} \
+${input} \
+${SLURM_CPUS_PER_TASK}
+
+# END 
+
+```
+
+This is an overall simple script that sets up an array with appropriate resources, and then calls a script (`Paired_End_Trimming_and_Mapping_Single_Sample.sh`) for each set of fastQ files. It passes the base directory, the input filename, and the number of available cores to the script in order for it to function properly.
+
+The *actual* trimming and mapping happens in the abovementioned script. 
+
+`Paired_End_Trimming_and_Mapping_Single_Sample.sh`:
+
+```
+#!/bin/bash
+
+# this is a basic script for trimming and mapping paired end reads.
+# It takes as input options:
+# 1) for the base directory
+# 2) for the filename of read 1
+# 3) for the number of cores per task, as defined in slurm
+
+# IT ASSUMES: that the raw data is in the base directory, and that
+# the destination directories will be in the base directory as well.
+
+# It uses 6G of memory per cpu, which is hard-coded. 
+
+basedir=$1
+filename=$(basename $2)
+cores=$3
+
+echo "Base directory: $basedir";
+echo "Read1 Filename: $filename";
+
+module load python/3.8.4
+module load fastqc/0.11.5
+module load bowtie2/2.4.1
+module load samtools/1.10.1
+module load picard/2.21.4
+
+rawdir=${basedir}/Raw_Data
+trimdir=Trimmed_Reads
+mapdir=Mapped_Reads
+### index=/projects/p31603/Bowtie_Indices/dm6/dm6
+index=/projects/b1182/Bowtie_Indices/dm6/dm6
+
+### source /projects/p31603/TrimGaloreEnv/bin/activate
+source /projects/b1182/TrimGaloreEnv/bin/activate
+
+echo "path to the first read"
+echo ${rawdir}/${filename}
+filename2=$(echo $filename | sed "s/_R1_/_R2_/g")
+echo "path to the second read"
+echo ${rawdir}/${filename2}
+echo
+
+trim_galore \
+-o ${basedir}/${trimdir} \
+--gzip \
+--fastqc \
+--cores ${cores} \
+--paired ${rawdir}/${filename} ${rawdir}/${filename2}
+
+deactivate
+
+tfilename=$(echo $filename | sed "s/.fastq.gz/_val_1.fq.gz/g")
+tfilename2=$(echo $tfilename | sed "s/_val_1/_val_2/g")
+tfilename2=$(echo $tfilename2 | sed "s/_R1_/_R2_/g")
+
+echo "Next we use Bowtie2 on the output of Trimgalore"
+echo ${basedir}/${trimdir}/${tfilename}
+echo ${basedir}/${trimdir}/${tfilename2}
+
+shortname=$(echo $tfilename |cut -d_ -f1)
+echo
+echo "The output for this step will have a filename that contains"
+echo ${shortname}
+echo
+
+bowtie2 \
+-p ${cores} \
+-X 2000 \
+-x $index \
+-1 ${basedir}/${trimdir}/${tfilename} \
+-2 ${basedir}/${trimdir}/${tfilename2} \
+ 2> ${basedir}/${mapdir}/${shortname}.bowtie.mapping.log.txt | \
+samtools view \
+-bS - > ${basedir}/${mapdir}/${shortname}.mapped.bam
+
+samtools sort -@ ${cores} -m 6G -T ${basedir}/${mapdir}/temp${shortname} \
+-o ${basedir}/${mapdir}/temp${shortname}1.bam \
+${basedir}/${mapdir}/${shortname}.mapped.bam
+
+rm ${basedir}/${mapdir}/${shortname}.mapped.bam
+
+java -jar /software/picard/2.21.4/bin/picard.jar CleanSam \
+INPUT=${basedir}/${mapdir}/temp${shortname}1.bam \
+OUTPUT=${basedir}/${mapdir}/temp${shortname}2.bam
+
+rm ${basedir}/${mapdir}/temp${shortname}1.bam
+
+java -jar /software/picard/2.21.4/bin/picard.jar MarkDuplicates \
+INPUT=${basedir}/${mapdir}/temp${shortname}2.bam \
+OUTPUT=${basedir}/${mapdir}/${shortname}.mapped.md.bam \
+METRICS_FILE=${basedir}/${mapdir}/${shortname}.dup.metrics.txt
+
+rm ${basedir}/${mapdir}/temp${shortname}2.bam
+
+samtools flagstat ${basedir}/${mapdir}/${shortname}.mapped.md.bam > \
+${basedir}/${mapdir}/${shortname}.mapped.md.bam.FLAGSTAT.txt
+
+samtools index ${basedir}/${mapdir}/${shortname}.mapped.md.bam
+```
+
+This script will perform automated trimming of adapter sequences (output is saved to `Trimmed_Reads` directory). Then each of the trimmed read sets are mapped using `bowtie2` with fairly default parameters (the only specification is that reads mapping >2000 bp apart are discarded). Mapped reads and associated files are stored in the `Mapped_Reads` directory. These include: the bowtie mapping log, a duplicate-marked bam file of the mapped reads, a flagstat document, and the index.
+
+### Making GRanges
+
+The following script, `Bam_to_GRanges_Manager.sh` has been used to manage the conversion of all BAMs in a directory into a GRangesList object, stored in a new directory, `GRanges`. __As with the other manager script, the user would copy this into a base directory for an experiment, edit the script to suit the specific needs of the analysis, and then execute.__ 
+
+`Bam_to_GRanges_Manager.sh`
+```
+#!/bin/bash
+#SBATCH --account=b1042
+#SBATCH --partition=genomicsguestA
+#SBATCH --nodes=1
+#SBATCH --ntasks-per-node=1
+#SBATCH --time=04:00:00
+#SBATCH --mem-per-cpu=64G
+#SBATCH --job-name=BamToGR                 ## change this to job name
+#SBATCH --output=Logs/BamToGR_outlog        ## will write files to the Logs dir.               
+#SBATCH --error=Logs/BamToGR_screenlog
+
+module load R/4.3.0
+
+### enter the full path to mapped reads:
+mapdir="/projects/b1182/Corinne/Bowman_eLife_K27/Mapped_Reads"
+
+### enter the minimal mapQ score to import:
+mapq="10"
+
+### do you want to exclude duplicates? (TRUE or FALSE?)
+ex="FALSE"
+
+### change the directory below to your base working directory
+cd /projects/b1182/Corinne/Bowman_eLife_K27
+
+mkdir GRanges 
+
+Rscript --vanilla \
+/projects/b1182/ImportPairedEndv1.R \
+$mapdir \
+$mapq \
+$ex
+
+
+```
+
+!!! Note
+        Importing the data into a GRangesList object can be very memory intensive. The approach above is single-threaded and basically needs to have enough memory to encompass the entire set of .bam files. On the specified partition, up to 180 GB of memory can be requested. 64 GB should be sufficient for our routine sequencing runs.
+
+!!! Note
+        The script above uses R version 4.3.0. A user may wish to change this to match the version of R that they use in downstream applications.
+
+This script sets up the slurm environment, handles user-specified options (where is the data, minimum map quality, and whether to exclude duplicates), and then passes this information to an operator function, `ImportPairedEndv1.R`. As before, the operator script could be edited for different needs, but it should not be overwritten.
+
+`ImportPairedEndv1.R`
+```
+#!/usr/bin/env Rscript
+# Script name: "ImportPairedEndv1.R"
+# Import all paired-end BAMs in a directory, export GRangesList.
+# Input Args:
+####### 1) Directory containing the input data (default = "Mapped_Reads/")
+####### 2) MapQuality Filter Value (default = 10)
+####### 3) Exclude Duplicates? (T/F, default = FALSE)
+#
+# Output: Directory named GRanges, containing a compressed GRangesList object.
+#
+# Assumptions: your BAM filenames within the source directory end with the text "mapped.md.bam"
+#
+# This function does not distinguish reads by size, and only imports data on canonical chromosomes.
+
+args = NULL
+args = commandArgs(trailingOnly = TRUE)
+
+if(length(args) == 0){
+    args[1] = paste0(getwd(),"/Mapped_Reads")
+    args[2] = 10
+    args[3] = TRUE
+}else if(length(args) < 3 & length(args) > 0){
+    stop("Please either specify all options or leave all blank to use defaults.")
+}
+
+datadir = args[1]
+mapQval = as.numeric(args[2])
+if(as.logical(args[3])){
+    dupchoice = FALSE
+}else{ dupchoice = NA }
+
+cat("ImportPairedEndv1.R\n")
+cat(date())
+cat("\n\n")
+cat("Current working directory:\n")
+cat(getwd())
+cat("\nInput data directory:\n")
+cat(datadir)
+cat("\nSpecified Map Quality Cutoff:\n")
+cat(mapQval)
+cat("\nExclude Duplicates?\n")
+cat(as.logical(args[3]))
+cat("\n")
+
+
+library(GenomicAlignments)
+library(BSgenome.Dmelanogaster.UCSC.dm6)
+
+dm6 = Dmelanogaster
+good.uns = c('chrX','chr2L','chr2R','chr3L','chr3R','chr4')
+
+params = ScanBamParam(
+    flag = scanBamFlag(
+        isPaired = TRUE,
+        isProperPair = TRUE,
+        isSecondaryAlignment = FALSE,
+        isUnmappedQuery = FALSE,
+        isDuplicate = dupchoice,
+    ),
+    mapqFilter = mapQval
+)
+
+files = list.files(
+    datadir,
+    pattern = ".mapped.md.bam$",
+    full.names = TRUE
+)
+
+cat("\n")
+cat("Input Data Files:\n")
+cat(basename(files), sep = "\n")
+cat("\n")
+cat("Processed: ", sep = "\n")
+
+gr = GRangesList(lapply(files, function(x){
+    cat(x, sep = "\n")
+    r = readGAlignmentPairs(
+            file = BamFile(x),
+            param = params
+    )
+
+    names(r) = NULL
+
+    r = r[seqnames(r) %in% good.uns]
+
+    seqlevels(r) = seqlevels(dm6)
+    seqinfo(r) = seqinfo(dm6)
+    seqlevels(r) = seqlevelsInUse(r)
+    genome(r) = 'dm6'
+
+    return(r)
+}))
+
+names(gr) = gsub(x = basename(files), pattern = ".mapped.md.bam$", replacement = "")
+
+saveRDS(gr, file = paste0(
+    getwd(),
+    "/GRanges/MappedReadsList.gr"
+))
+
+cat(date())
+cat("\n\n\n")
+sessionInfo()
+```
+
+This script will import over the canonical chromosomes the .bam files that are properly paired and non-secondary aligned. User specifies whether duplicates are excluded or not. The seqinfo and seqlevels are adjusted as necessary to reflect the reference genome (dm6). These are collected in a GRangesList object (named after their sample names) and saved in the `GRanges` directory with the generic filename `MappedReadsList.gr`. The script is verbose and prints to screen (and saved in the 'outlog') the filenames that are being processed as well as the session info for the operation.
+
+### Running these scripts
+
+1) Copy the two manager scripts above to the top level of your experiment's directory. 
+
+2) Make and save the necessary changes in *your copies of these scripts* to suit your specific analysis needs. Double check that all file paths are properly specified. Do not change paths to the operator scripts unless you specifically intend to use a different operator script.
+
+3) Make your copies of these scripts executable.
+
+```
+chmod u+x Mapping_and_Trimming_manager.sh
+chmod u+x Bam_to_GRanges_Manager.sh
+```
+
+4) There are several ways to run these in series. They must be run in series, because the second manager script needs the first one to complete before running.
+
+Option 1: run the first script. Wait for it to finish. Then run the second script.
+
+```
+cd <<path to the top level of your experiment's directory>>
+
+sbatch Mapping_and_Trimming_manager.sh
+
+#... wait ...
+
+sbatch Bam_to_GRanges_Manager.sh
+```
+
+Option 2: use the `--dependency` option in slurm to let the first job complete before starting the second:
+
+```
+jobID=$(sbatch Mapping_and_Trimming_manager.sh)
+
+sbatch --dependency=afterok:$jobID Bam_to_GRanges_Manager.sh
+```
+
+A call to `sbatch` returns the JobID to stdout, which in the above code, we assign to the variable `jobID`. Then, what happens is in the second call to `sbatch`, the `--dependency=afterok:$jobID` option means that the second command will not start until the job associated with the first JobID is completed with an "ok" status. 
+
+The downside to this is, of course, that if problems are encountered in the first job, then the second job will never initiate. 
