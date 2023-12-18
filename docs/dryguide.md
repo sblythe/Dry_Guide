@@ -198,7 +198,7 @@ file=${name_list[$SLURM_ARRAY_TASK_ID]}
 Such an array script will initiate N independent instances of your script, each with a single array task id value. The environment variable `SLURM_ARRAY_TASK_ID` will report that single value, and subset the name list, so that particular instance of the script will only operate on that single indexed file.
 
 !!! Important
-        When re-writing scripts to operate on an array, be mindful that all of your individual samples will be processed simultaneously, and if you write temporary files to an output directory, they need to have unique filenames. See the example script below for a way of dealing with this (in the calls to `samtools sort` and `picard CleanSam`). Similarly, scripts should be re-written to purge temporary files as soon as they are no longer needed, rather than just throwing them away at the end of the process. The reason for this is because required disk space for storage can balloon significantly when using temporary files, especially if all those temporary files are being generated simultaneously, instead of once per sample.
+    When re-writing scripts to operate on an array, be mindful that all of your individual samples will be processed simultaneously, and if you write temporary files to an output directory, they need to have unique filenames. See the example script below for a way of dealing with this (in the calls to `samtools sort` and `picard CleanSam`). Similarly, scripts should be re-written to purge temporary files as soon as they are no longer needed, rather than just throwing them away at the end of the process. The reason for this is because required disk space for storage can balloon significantly when using temporary files, especially if all those temporary files are being generated simultaneously, instead of once per sample.
 
 Running array scripts are best handled by dividing the task into two parts: a script that handles the dispensing of arrayed tasks, and a script that will be run by each of the individual arrays. 
 
@@ -361,7 +361,7 @@ samtools index ${basedir}/${mapdir}/${shortname}.mapped.md.bam
 The first script would be passed to `sbatch`, and so long as the second one is found at the path indicated in the first, it should operate on the designated files.
 
 !!! Note
-        The above script examples are meant to provide a starting point for developing your own approaches. The resource allocation was sufficient for mapping PE150 samples with between 30M and 50M pairs of reads. If you have fewer reads (or maybe shorter reads), this will be over-specified. Similarly, larger datasets may require additional resources (most likely more RAM). The section below suggests a way to figure out how much RAM to allocate to this kind of a request.
+    The above script examples are meant to provide a starting point for developing your own approaches. The resource allocation was sufficient for mapping PE150 samples with between 30M and 50M pairs of reads. If you have fewer reads (or maybe shorter reads), this will be over-specified. Similarly, larger datasets may require additional resources (most likely more RAM). The section below suggests a way to figure out how much RAM to allocate to this kind of a request.
 
 ### Issues with running arrays
 
@@ -394,7 +394,7 @@ These commands for monitoring SLURM jobs are described in more detail in the nex
 `seff` reports that in the end, we only use around 25% of the allocated total 96 GB of RAM (~25 GB). It turns out that we need 8 GB per core (even though we only use 4 GB per core in the `samtools sort` command) because the `picard MarkDuplicates` commands end up needing >6 GB per core to do their job. We are running `MarkDuplicates` with default parameters, so we could dive in and figure out the memory management options for this program, but I have not yet done that. If we specify 6 GB or less memory per core, some of the jobs fail because `picard` will require more than that to complete.
 
 !!! Note
-        Another issue that comes up is that asking for 12 x 12 cores plus 8 GB RAM per core may be seen as a 'big ask' depending on how busy Quest is. If each array takes a while to transition from "Pending" to "Running", then the time savings associated with the arrayed jobs is reduced. This script above works as well with 4 cores (instead of 12) per job, and I haven't had any issues with slurm delays when asking for this amount of resources. The trade off is that it could take 5-6 hours for the job to complete. The point here is that there are a number of ways to ask for resources, and if you observed significant delays in the job running, try reducing your ask for cores. 
+    Another issue that comes up is that asking for 12 x 12 cores plus 8 GB RAM per core may be seen as a 'big ask' depending on how busy Quest is. If each array takes a while to transition from "Pending" to "Running", then the time savings associated with the arrayed jobs is reduced. This script above works as well with 4 cores (instead of 12) per job, and I haven't had any issues with slurm delays when asking for this amount of resources. The trade off is that it could take 5-6 hours for the job to complete. The point here is that there are a number of ways to ask for resources, and if you observed significant delays in the job running, try reducing your ask for cores. 
 
 ## Monitoring SLURM Jobs on Quest
 
@@ -419,7 +419,7 @@ The following bash script will do it, but it has been generalized so that you ne
 This script will change to the _parental_ directory containing the downloaded data, create a new directory "Raw_Data" where it will save the merged fastq.gz files, then change to the subdirectory that contains the downloaded (split by lane) data, and loop through the fastq files, merging them. 
 
 !!! Note
-     For this to work, you have to move each pair of reads (for paired-end data) out of the individual directory that Illumina provides it in, to a single common directory. To be super careful, you could do it yourself, by hand. But this would obviously become tedious with more than a handful of different barcoded samples. You can do this from the command line, by navigating to the directory that contains each of the individual directories, and then using the command `mv` to move the contents of each subdirectory _up_ one level. The command for this looks like `mv */* .`. Naturally, this is not a command that you want to mess up, or run in the wrong place because there is no 'undo' here. 
+    For this to work, you have to move each pair of reads (for paired-end data) out of the individual directory that Illumina provides it in, to a single common directory. To be super careful, you could do it yourself, by hand. But this would obviously become tedious with more than a handful of different barcoded samples. You can do this from the command line, by navigating to the directory that contains each of the individual directories, and then using the command `mv` to move the contents of each subdirectory _up_ one level. The command for this looks like `mv */* .`. Naturally, this is not a command that you want to mess up, or run in the wrong place because there is no 'undo' here. 
 
 ```
 #!/bin/bash
@@ -545,7 +545,7 @@ Volumes
 There may be additional directories within the `My_Experiment` directory corresponding to the containers in which the data is delivered. Take any raw data from directories downloaded from BaseSpace (for instance) that you hope to work with and consolidate it within the `Raw_Data` directory.
 
 !!! Important
-        The "My_Experiment" directory in the example above represents a particular sequencing run, for a specific experiment. Keep separate runs in separate directories. Do not modify the "Raw_Data" directory following the initial mapping. This includes adding data generated in other sequencing runs.
+    The "My_Experiment" directory in the example above represents a particular sequencing run, for a specific experiment. Keep separate runs in separate directories. Do not modify the "Raw_Data" directory following the initial mapping. This includes adding data generated in other sequencing runs.
 
 What I do, is I create an identical `My_Experiment` directory in the proper location in Quest `/projects/b1182/Shelby/My_Experiment` and I copy the `Raw_Data` folder from the server to this location.
 
@@ -803,10 +803,10 @@ $ex
 ```
 
 !!! Note
-        Importing the data into a GRangesList object can be very memory intensive. The approach above is single-threaded and basically needs to have enough memory to encompass the entire set of .bam files. On the specified partition, up to 180 GB of memory can be requested. 64 GB should be sufficient for our routine sequencing runs.
+    Importing the data into a GRangesList object can be very memory intensive. The approach above is single-threaded and basically needs to have enough memory to encompass the entire set of .bam files. On the specified partition, up to 180 GB of memory can be requested. 64 GB should be sufficient for our routine sequencing runs.
 
 !!! Note
-        The script above uses R version 4.3.0. A user may wish to change this to match the version of R that they use in downstream applications.
+    The script above uses R version 4.3.0. A user may wish to change this to match the version of R that they use in downstream applications.
 
 This script sets up the slurm environment, handles user-specified options (where is the data, minimum map quality, and whether to exclude duplicates), and then passes this information to an operator function, `ImportPairedEndv1.R`. As before, the operator script could be edited for different needs, but it should not be overwritten.
 
@@ -937,7 +937,7 @@ chmod u+x Bam_to_GRanges_Manager.sh
 Option 1: run the first script. Wait for it to finish. Then run the second script.
 
 ```
-cd <<path to the top level of your experiment's directory>>
+cd "path to the top level of your experiment's directory"
 
 sbatch Mapping_and_Trimming_manager.sh
 
