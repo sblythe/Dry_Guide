@@ -23,16 +23,17 @@ In the following, I describe how to get access to Quest, how to use some of its 
 ## New Users
 
 To gain access to Quest: 
-
-Register new user with your NetID [here](https://app.smartsheet.com/b/form?EQBCT=9b3647a8cb2145929737ab4a0540cb46).
 		
 Apply to be added to the lab's partition/project/allocations (p31603 and b1182) [here](https://app.smartsheet.com/b/form/797775d810274db5889b5199c4260328).
 Allocation manager: Shelby Blythe, `shelby.blythe@northwestern.edu`
 		
-Apply to be added to partition b1042 [here](https://app.smartsheet.com/b/form/797775d810274db5889b5199c4260328).
+Apply to be added to partition b1042 [here](https://app.smartsheet.com/b/form/f6e96bd561114be8a33dc778bc00b919).
 Allocation manager: Janna Nugent, `janna.nugent@northwestern.edu`
 
 Use the Quest Help email: `quest-help@northwestern.edu` if necessary to get help
+
+!!! Note
+    If any of these links are dead, please tell Shelby so he can update them, and search for "Quest access Northwestern" to find hopefully current, non-dead links.
 
 ## Using Terminal or Something Fancier
 
@@ -104,12 +105,16 @@ To determine what "groups" you have access to, enter `groups` on the command lin
 
 The Blythe lab has access to one specialized allocation, __b1182__. This is where we have 4 TB of total storage. This is the current location to perform Quest based tasks. Please keep in mind that while this is nice storage, any important products of an analysis should be backed up to the lab server. *No one but you is responsible for ensuring that your data is properly backed up!*
 
-The Blythe lab has access to one project, __p31603__. This is an older workspace and will eventually be migrated to __b1182__. This is where we have 500 GB of total storage. It currently houses some repositories for mapping, as well as a virtual environment for running our preferred read trimmer.  
+The Blythe lab has access to one project, __p31603__. This is an older workspace and will eventually be migrated to __b1182__. This is where we have 5000 GB of total storage. It currently houses some repositories for mapping, as well as a virtual environment for running our preferred read trimmer.  
 
 __b1042__ - The 'Genomics' Project has 200 Tb of space and 100 nodes associated with it. This space is shared with other labs and is designed for temporary use only. The space is available at `/projects/b1042/BlytheLab/`. By default, files are deleted after 30 days. One can submit jobs to `--partition=genomicsguestA` to use this partition, with a max job duration of 48hr. 
 
 !!! Note
     Anyone who uses Quest should build your own folder under `/projects/b1182` with your name. You should only write and revise files under your project folder. You can read/copy data from elsewhere in __b1182__ (or __p31603__) but don't write/save any data to locations outside of your project folder. You could also store things on `/projects/b1042/BlytheLab`, but storage anywhere on __b1042__ is for 30 days only, so do not store anything here that you hope to maintain access to over a long period. We have limited space on __p31603__ and __b1182__. This is also not a long-term location for storage, but rather a site where you import raw data, and save the output of processing, before you download the data back to long-term storage on the lab server. 
+
+### Checking available storage space on b1182
+
+If you would like to check the available storage on any project, including b1182, the command `checkproject b1182` will report current storage usage, as well as provide other information about the allocation's status.
 
 ## Running interactive jobs on Quest
 
